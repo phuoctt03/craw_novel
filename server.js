@@ -2,6 +2,7 @@ const express = require("express")
 const axios = require("axios")
 const cheerio = require("cheerio")
 const cors = require("cors")
+const fs = require("fs")
 
 const app = express()
 
@@ -22,9 +23,42 @@ async function fetchChapter(url) {
   const html = res.data
   const $ = cheerio.load(html)
 
+  fs.writeFileSync("novel.html", html)
+  fs.writeFileSync("cheerio.html", $.html())
+
+  // ===== parse CSS mapping =====
+
+  const css = $("style").map((i,el)=>$(el).html()).get().join("\n")
+
+  const cssMap = {}
+
+  const regex = /\.([a-zA-Z0-9\-]+):before\s*{\s*content:\s*"([^"]+)"/g
+
+  let match
+
+  while ((match = regex.exec(css))) {
+    cssMap[match[1]] = match[2]
+  }
+
+  // ===== replace span =====
+
+  $("#chapter-content-render span").each((i,el)=>{
+
+    const cls = $(el).attr("class")
+
+    if(cssMap[cls]){
+      $(el).replaceWith(cssMap[cls])
+    }
+
+  })
+
+  // ===== lấy title =====
+
   const title =
     $("h1").first().text().trim() ||
     $(".chapter-title").text().trim()
+
+  // ===== lấy content =====
 
   const content =
     $("#chapter-content-render .actac").text().trim() ||
