@@ -8,6 +8,8 @@ const app = express()
 app.use(cors())
 app.use(express.json())
 
+/* ---------------- FETCH CHAPTER ---------------- */
+
 async function fetchChapter(url) {
 
   const res = await axios.get(url, {
@@ -33,6 +35,8 @@ async function fetchChapter(url) {
     content
   }
 }
+
+/* ---------------- API ---------------- */
 
 app.get("/chapter", async (req, res) => {
 
@@ -60,8 +64,46 @@ app.get("/chapter", async (req, res) => {
 
 })
 
+/* ---------------- PING ENDPOINT ---------------- */
+
+app.get("/ping",(req,res)=>{
+  res.send("ok")
+})
+
+/* ---------------- START SERVER ---------------- */
+
 const PORT = process.env.PORT || 3000
 
 app.listen(PORT, () => {
+
   console.log(`Server running on http://localhost:${PORT}`)
+
+  startSelfPing()
+
 })
+
+/* ---------------- SELF PING ---------------- */
+
+function startSelfPing(){
+
+  const BASE_URL =
+    process.env.BASE_URL ||
+    `http://localhost:${PORT}`
+
+  setInterval(async ()=>{
+
+    try{
+
+      await axios.get(BASE_URL + "/ping")
+
+      console.log("self ping success")
+
+    }catch(err){
+
+      console.log("self ping fail")
+
+    }
+
+  }, 5 * 60 * 1000) // 5 phút
+
+}
