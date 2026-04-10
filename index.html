@@ -289,6 +289,11 @@ button.danger:hover {
       <div class="button-group">
         <button class="primary" onclick="fetchChapter()">🔄 Fetch Chapter</button>
         <button class="secondary" onclick="openBackendPopup()">⚙️ Settings</button>
+
+        <button class="secondary" onclick="readChapter()">🔊 Read</button>
+        <button class="secondary" onclick="pauseRead()">⏸ Pause</button>
+        <button class="secondary" onclick="resumeRead()">▶ Resume</button>
+        <button class="secondary" onclick="stopRead()">⏹ Stop</button>
       </div>
     </div>
 
@@ -390,6 +395,69 @@ document.getElementById("urlInput").addEventListener("keypress", function(e) {
     fetchChapter()
   }
 })
+
+let currentSpeech = null
+
+function speakLongText(text){
+
+  stopRead()
+
+  const chunks = text.match(/.{1,1800}/g) || []
+
+  let index = 0
+
+  function speakNext(){
+
+    if(index >= chunks.length) return
+
+    const speech = new SpeechSynthesisUtterance(chunks[index])
+
+    speech.lang = "vi-VN"
+    speech.rate = 1
+    speech.pitch = 1
+
+    speech.onend = () => {
+      index++
+      speakNext()
+    }
+
+    currentSpeech = speech
+
+    speechSynthesis.speak(speech)
+
+  }
+
+  speakNext()
+
+}
+
+function readChapter(){
+
+  const title = document.getElementById("title").innerText
+  const content = document.getElementById("content").innerText
+
+  if(!content){
+    alert("⚠️ No chapter loaded")
+    return
+  }
+
+  const text = title + ". " + content
+
+  speakLongText(text)
+
+}
+
+function pauseRead(){
+  speechSynthesis.pause()
+}
+
+function resumeRead(){
+  speechSynthesis.resume()
+}
+
+function stopRead(){
+  speechSynthesis.cancel()
+}
 
 </script>
 
