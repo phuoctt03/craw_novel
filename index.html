@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Novel Chapter Reader</title>
+
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+}
+
+.header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 30px;
+  text-align: center;
+}
+
+.header h2 {
+  font-size: 28px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.header p {
+  font-size: 14px;
+  opacity: 0.9;
+  letter-spacing: 0.5px;
+}
+
+.content {
+  padding: 30px;
+}
+
+.input-section {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 30px;
+  flex-wrap: wrap;
+}
+
+#urlInput {
+  flex: 1;
+  min-width: 200px;
+  padding: 12px 16px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+#urlInput:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.button-group {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+button {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+button.primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+button.primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+}
+
+button.primary:active {
+  transform: translateY(0);
+}
+
+button.secondary {
+  background: #f3f4f6;
+  color: #374151;
+  border: 2px solid #e5e7eb;
+}
+
+button.secondary:hover {
+  background: #e5e7eb;
+  border-color: #d1d5db;
+}
+
+#loading {
+  text-align: center;
+  color: #667eea;
+  font-weight: 600;
+  margin: 20px 0;
+  min-height: 20px;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+#title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 30px 0 20px 0;
+  border-left: 4px solid #667eea;
+  padding-left: 16px;
+}
+
+#content {
+  white-space: pre-wrap;
+  line-height: 1.8;
+  color: #374151;
+  font-size: 16px;
+  background: #f9fafb;
+  padding: 20px;
+  border-radius: 8px;
+  border-left: 4px solid #667eea;
+  overflow-x: auto;
+}
+
+.popup {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+}
+
+.popup.hidden {
+  display: none;
+}
+
+.popup-box {
+  background: white;
+  padding: 32px;
+  width: 90%;
+  max-width: 420px;
+  border-radius: 16px;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.popup-box h3 {
+  font-size: 20px;
+  color: #1f2937;
+  margin-bottom: 20px;
+  font-weight: 600;
+}
+
+#backendInput {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  margin-bottom: 24px;
+  transition: all 0.3s ease;
+}
+
+#backendInput:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.popup-buttons {
+  display: flex;
+  gap: 12px;
+}
+
+.popup-buttons button {
+  flex: 1;
+}
+
+button.danger {
+  background: #ef4444;
+  color: white;
+}
+
+button.danger:hover {
+  background: #dc2626;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(239, 68, 68, 0.3);
+}
+
+@media (max-width: 600px) {
+  .header {
+    padding: 20px;
+  }
+
+  .header h2 {
+    font-size: 24px;
+  }
+
+  .content {
+    padding: 20px;
+  }
+
+  #title {
+    font-size: 22px;
+  }
+
+  #content {
+    font-size: 15px;
+  }
+
+  .input-section {
+    flex-direction: column;
+  }
+
+  #urlInput {
+    min-width: 100%;
+  }
+
+  .button-group {
+    width: 100%;
+  }
+
+  .button-group button {
+    flex: 1;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+  <div class="header">
+    <h2>📖 Novel Chapter Reader</h2>
+    <p>Fetch and read your favorite chapters with ease</p>
+  </div>
+
+  <div class="content">
+    <div class="input-section">
+      <input id="urlInput" placeholder="Paste chapter URL here..." />
+      <div class="button-group">
+        <button class="primary" onclick="fetchChapter()">🔄 Fetch Chapter</button>
+        <button class="secondary" onclick="openBackendPopup()">⚙️ Settings</button>
+      </div>
+    </div>
+
+    <div id="loading"></div>
+    <div id="title"></div>
+    <div id="content"></div>
+  </div>
+</div>
+
+<!-- Backend Popup -->
+<div id="backendPopup" class="popup hidden">
+  <div class="popup-box">
+    <h3>⚙️ Backend Configuration</h3>
+    <p style="color: #6b7280; margin-bottom: 16px; font-size: 14px;">Enter your backend server URL</p>
+    <input id="backendInput" placeholder="http://localhost:3000" />
+    <div class="popup-buttons">
+      <button class="secondary" onclick="closeBackendPopup()">Cancel</button>
+      <button class="primary" onclick="saveBackend()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+
+let backend = localStorage.getItem("backend_url")
+
+// first time setup
+if(!backend){
+  document.getElementById("backendPopup").classList.remove("hidden")
+}
+
+// open popup
+function openBackendPopup(){
+  document.getElementById("backendInput").value = backend || ""
+  document.getElementById("backendPopup").classList.remove("hidden")
+}
+
+// close popup
+function closeBackendPopup(){
+  document.getElementById("backendPopup").classList.add("hidden")
+}
+
+// save backend
+function saveBackend(){
+  const value = document.getElementById("backendInput").value.trim()
+
+  if(!value){
+    alert("⚠️ Please enter a valid backend URL")
+    return
+  }
+
+  backend = value
+  localStorage.setItem("backend_url", value)
+  closeBackendPopup()
+}
+
+// fetch chapter
+async function fetchChapter(){
+  const url = document.getElementById("urlInput").value.trim()
+
+  if(!url){
+    alert("⚠️ Please enter a chapter URL")
+    return
+  }
+
+  if(!backend){
+    alert("⚠️ Backend not configured. Please set it in Settings.")
+    return
+  }
+
+  document.getElementById("loading").innerText = "⏳ Loading chapter..."
+  document.getElementById("title").innerText = ""
+  document.getElementById("content").innerText = ""
+
+  try{
+    const api = backend + "/chapter?url=" + encodeURIComponent(url)
+    const res = await fetch(api)
+
+    if(!res.ok){
+      throw new Error("HTTP " + res.status)
+    }
+
+    const data = await res.json()
+
+    document.getElementById("title").innerText = data.title || "Chapter"
+    document.getElementById("content").innerText = data.content || "No content found"
+
+  }catch(e){
+    alert("❌ Error: " + e.message)
+    document.getElementById("content").innerText = ""
+  }
+
+  document.getElementById("loading").innerText = ""
+}
+
+// Allow Enter key to fetch
+document.getElementById("urlInput").addEventListener("keypress", function(e) {
+  if(e.key === "Enter") {
+    fetchChapter()
+  }
+})
+
+</script>
+
+</body>
+</html>
