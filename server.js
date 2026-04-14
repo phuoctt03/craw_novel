@@ -56,13 +56,35 @@ async function fetchChapter(url) {
 
   // ===== lấy content =====
 
-  const content =
+  let content =
     $("#chapter-content-render .actac").text().trim() ||
     $("#chapter-content-render").text().trim()
 
+  content = content
+    .replace(
+      /\[Truyện được đăng tải duy nhất tại.*?\]/gi,
+      ""
+    )
+    .replace(/(Chương trước|Chương sau)[\s\S]*$/i, "")
+    .replace(/(?<=\p{L})\.(?=\p{L})/gu, "")
+  
+  const base = new URL(url).origin
+  const chapters = $("#selected_chapter option").map(function () {
+  const value = $(this).val()
+  const [slug, chapter] = value.split(",")
+
+    return {
+      title: $(this).text().trim(),
+      slug,
+      chapter,
+      url: `${base}/${slug}/${chapter}.html`
+    }
+  }).get()
+
   return {
     title,
-    content
+    content,
+    chapters
   }
 }
 
