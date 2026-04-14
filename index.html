@@ -308,10 +308,25 @@ button.danger:hover {
 }
 
 .chapter-nav {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+
+  background: white;
+  padding: 10px 12px;
+  border-radius: 12px;
+
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+
   display: flex;
   gap: 10px;
-  margin-bottom: 20px;
   align-items: center;
+
+  z-index: 999;
+
+  backdrop-filter: blur(10px);
+  background: rgba(255,255,255,0.9);
 }
 
 #chapterSelect {
@@ -365,6 +380,29 @@ button.danger:hover {
 
   .button-group button {
     flex: 1;
+  }
+
+  .chapter-nav {
+    left: 10px;
+    right: 10px;
+    transform: none;
+
+    justify-content: space-between;
+    border-radius: 12px;
+    padding: 8px;
+  }
+
+  /* select chiếm space vừa đủ */
+  #chapterSelect {
+    flex: 1;
+    max-width: none;
+    font-size: 12px;
+  }
+
+  /* button nhỏ gọn */
+  .chapter-nav button {
+    padding: 6px 10px;
+    font-size: 12px;
   }
 }
 </style>
@@ -489,6 +527,8 @@ async function fetchChapter(){
     alert("⚠️ Please enter a chapter URL")
     return
   }
+
+  localStorage.setItem("last_chapter_url", url)
 
   if(!backend){
     alert("⚠️ Backend not configured. Please set it in Settings.")
@@ -721,6 +761,29 @@ function updateNavButtons(){
   prevBtn.disabled = currentIndex >= chapters.length - 1
   nextBtn.disabled = currentIndex <= 0
 }
+
+window.addEventListener("load", () => {
+  const lastUrl = localStorage.getItem("last_chapter_url")
+
+  if(lastUrl){
+    document.getElementById("urlInput").value = lastUrl
+    fetchChapter()
+  }
+})
+let lastScroll = 0
+const nav = document.querySelector(".chapter-nav")
+
+window.addEventListener("scroll", () => {
+  const current = window.scrollY
+
+  if(current > lastScroll){
+    nav.style.display = "none" // ẩn
+  } else {
+    nav.style.display = "flex" // hiện
+  }
+
+  lastScroll = current
+})
 </script>
 
 </body>
