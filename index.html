@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Novel Chapter Reader</title>
-
+<link rel="manifest" href="manifest.json" />
 <style>
 * {
   margin: 0;
@@ -785,6 +785,10 @@ window.addEventListener("scroll", () => {
   lastScroll = current
 })
 </script>
-
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/audio/service-worker.js');
+  }
+</script>
 </body>
 </html>
