@@ -799,7 +799,6 @@ function speakNextFromCurrent() {
   speech.pitch = pitch
 
   speech.onboundary = (event) => {
-    if (typeof event.charIndex !== "number") return
 
     currentCharIndex = event.charIndex
 
