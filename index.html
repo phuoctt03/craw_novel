@@ -345,6 +345,60 @@ button.danger:hover {
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
+.highlight-word {
+  background: #667eea;
+  color: white;
+  border-radius: 4px;
+}
+
+#progressContainer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 1000;
+  background: white;
+  padding: 8px 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.08);
+}
+
+#progressBar {
+  position: static;
+  width: 100%;
+  appearance: none;
+  -webkit-appearance: none;
+  height: 8px;
+  border-radius: 999px;
+  outline: none;
+  --progress: 0%;
+
+  background: linear-gradient(
+    to right,
+    #4f46e5 0%,
+    #4f46e5 var(--progress),
+    #e5e7eb var(--progress),
+    #e5e7eb 100%
+  );
+}
+
+#progressBar::-webkit-slider-thumb {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #4f46e5;
+  cursor: pointer;
+  box-shadow: 0 0 0 4px rgba(79,70,229,0.2);
+}
+
+#progressBar::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #4f46e5;
+  cursor: pointer;
+}
+
 @media (max-width: 600px) {
   .header {
     padding: 20px;
@@ -434,6 +488,11 @@ button.danger:hover {
         <button class="secondary" onclick="pauseRead()">⏸ Pause</button>
         <button class="secondary" onclick="resumeRead()">▶ Resume</button>
         <button class="secondary" onclick="stopRead()">⏹ Stop</button>
+        <button class="secondary" onclick="restartRead()">🔁 Restart</button>
+      </div>
+      <div id="progressContainer">
+        <span id="progressText">0 / 0</span>
+        <input id="progressBar" type="range" min="0" value="0">
       </div>
     </div>
 
@@ -519,6 +578,35 @@ function saveBackend(){
   closeBackendPopup()
 }
 
+function initProgressBar() {
+  const progressBar = document.getElementById("progressBar")
+
+  progressBar.min = 0
+  progressBar.max = currentText.length
+  progressBar.value = 0
+  progressBar.style.setProperty("--progress", "0%")
+
+  document.getElementById("progressText").innerText =
+    `0 / ${currentText.length}`
+}
+
+function renderContentWithSpans(text) {
+  const contentEl = document.getElementById("content")
+
+  const words = text.split(/(\s+)/)
+
+  let wordIndex = 0
+
+  contentEl.innerHTML = words.map(part => {
+    if (part === "\n") return "<br>"
+    if (/^\s+$/.test(part)) return part
+
+    const html = `<span id="word-${wordIndex}">${part}</span>`
+    wordIndex++
+    return html
+  }).join("")
+}
+
 // fetch chapter
 async function fetchChapter(){
   const url = document.getElementById("urlInput").value.trim()
@@ -550,7 +638,10 @@ async function fetchChapter(){
     const data = await res.json()
 
     document.getElementById("title").innerText = data.title || "Chapter"
-    document.getElementById("content").innerText = data.content || "No content found"
+    renderContentWithSpans(data.content || "No content found")
+
+    currentText = data.content || "No content found"
+    initProgressBar()
 
     chapters = data.chapters || []
 
@@ -575,52 +666,202 @@ document.getElementById("urlInput").addEventListener("keypress", function(e) {
   }
 })
 
+function highlightCurrentWord(index) {
+  const old = document.querySelector(".highlight-word")
+  if (old) old.classList.remove("highlight-word")
+
+  const el = document.getElementById("word-" + index)
+  if (el) {
+    el.classList.add("highlight-word")
+    el.scrollIntoView({
+      behavior: "smooth",
+      block: "center"
+    })
+  }
+}
+
 let currentSpeech = null
+let currentChunkIndex = 0
+let currentCharIndex = 0
+let currentWordIndex = 0
+let currentChunks = []
+let currentText = ""
+let currentAbsoluteCharIndex = 0
+let isDraggingProgress = false
 
-function speakLongText(text){
+function getWordIndexFromCharIndex(charIndex, text) {
+  const beforeText = text.slice(0, charIndex)
+  return beforeText.trim().split(/\s+/).length - 1
+}
 
-  stopRead()
+function updateProgress() {
+  const progressBar = document.getElementById("progressBar")
+  const progressText = document.getElementById("progressText")
 
-  const chunks = text.match(/.{1,1800}/g) || []
+  progressBar.value = currentAbsoluteCharIndex
 
-  let index = 0
+  const percent = (currentAbsoluteCharIndex / progressBar.max) * 100
+  progressBar.style.setProperty("--progress", percent + "%")
+
+  progressText.innerText =
+    currentAbsoluteCharIndex + " / " + progressBar.max
+}
+
+const progressBar = document.getElementById("progressBar")
+
+progressBar.addEventListener("mousedown", () => {
+  isDraggingProgress = true
+  speechSynthesis.cancel()
+})
+
+progressBar.addEventListener("touchstart", () => {
+  isDraggingProgress = true
+  speechSynthesis.cancel()
+})
+
+progressBar.addEventListener("touchend", function () {
+  const newIndex = parseInt(this.value)
+
+  currentAbsoluteCharIndex = newIndex
+
+  let total = 0
+  for (let i = 0; i < currentChunks.length; i++) {
+    const len = currentChunks[i].length
+
+    if (newIndex < total + len) {
+      currentChunkIndex = i
+      currentCharIndex = newIndex - total
+      break
+    }
+
+    total += len
+  }
+
+  speakNextFromCurrent()
+})
+
+progressBar.addEventListener("input", function () {
+  const newIndex = parseInt(this.value)
+
+  currentAbsoluteCharIndex = newIndex
+
+  currentWordIndex = getWordIndexFromCharIndex(
+    currentAbsoluteCharIndex,
+    currentText
+  )
+
+  highlightCurrentWord(currentWordIndex)
+  updateProgress()
+})
+
+progressBar.addEventListener("change", function () {
+  const newIndex = parseInt(this.value)
+
+  currentAbsoluteCharIndex = newIndex
+
+  let total = 0
+  for (let i = 0; i < currentChunks.length; i++) {
+    const len = currentChunks[i].length
+
+    if (newIndex < total + len) {
+      currentChunkIndex = i
+      currentCharIndex = newIndex - total
+      break
+    }
+
+    total += len
+  }
+
+  isDraggingProgress = false
+
+  speakNextFromCurrent()
+})
+
+function speakNextFromCurrent() {
+  if (currentChunkIndex >= currentChunks.length) return
+
+  const chunk = currentChunks[currentChunkIndex].slice(currentCharIndex)
 
   const voiceIndex = localStorage.getItem("voice_index")
   const rate = parseFloat(localStorage.getItem("voice_rate") || "1")
   const pitch = parseFloat(localStorage.getItem("voice_pitch") || "1")
 
-  function speakNext(){
+  const speech = new SpeechSynthesisUtterance(chunk)
 
-    if(index >= chunks.length) return
-
-    const speech = new SpeechSynthesisUtterance(chunks[index])
-
-    if(voices[voiceIndex]){
-      speech.voice = voices[voiceIndex]
-      speech.lang = voices[voiceIndex].lang
-    } else {
-      speech.lang = "vi-VN"
-    }
-
-    speech.rate = rate
-    speech.pitch = pitch
-
-    speech.onend = () => {
-      index++
-      speakNext()
-    }
-
-    currentSpeech = speech
-
-    speechSynthesis.speak(speech)
+  if (voices[voiceIndex]) {
+    speech.voice = voices[voiceIndex]
+    speech.lang = voices[voiceIndex].lang
+  } else {
+    speech.lang = "vi-VN"
   }
 
-  speakNext()
+  speech.rate = rate
+  speech.pitch = pitch
+
+  speech.onboundary = (event) => {
+    if (typeof event.charIndex !== "number") return
+
+    currentCharIndex = event.charIndex
+
+    currentAbsoluteCharIndex =
+        currentChunks.slice(0, currentChunkIndex).join("").length + currentCharIndex
+
+    currentWordIndex = getWordIndexFromCharIndex(
+        currentAbsoluteCharIndex,
+        currentText
+    )
+
+    highlightCurrentWord(currentWordIndex)
+    updateProgress()
+
+    localStorage.setItem("reading_chunk", currentChunkIndex)
+    localStorage.setItem("reading_char", currentCharIndex)
+  }
+
+  speech.onend = () => {
+    currentChunkIndex++
+    currentCharIndex = 0
+    currentWordIndex = 0
+
+    localStorage.setItem("reading_chunk", currentChunkIndex)
+    localStorage.setItem("reading_char", 0)
+
+    if (currentChunkIndex >= currentChunks.length) {
+      goNext()
+      setTimeout(() => {
+        restartRead()
+      }, 500)
+      return
+    }
+
+    speakNextFromCurrent()
+  }
+
+  currentSpeech = speech
+  speechSynthesis.speak(speech)
+}
+
+function speakLongText(text, resume = false) {
+  if (speechSynthesis.speaking) {
+    speechSynthesis.cancel()
+  }
+
+  currentText = text
+
+  if (!resume) {
+    currentChunks = []
+    for (let i = 0; i < text.length; i += 1800) {
+      currentChunks.push(text.slice(i, i + 1800))
+    }
+    currentChunkIndex = 0
+    currentCharIndex = 0
+    currentWordIndex = 0
+  }
+
+  speakNextFromCurrent()
 }
 
 function readChapter(){
-
-  const title = document.getElementById("title").innerText
   const content = document.getElementById("content").innerText
 
   if(!content){
@@ -628,22 +869,63 @@ function readChapter(){
     return
   }
 
-  const text = title + ". " + content
+  const text = content
 
-  speakLongText(text)
+  // chunk text trước
+  currentChunks = []
+  for (let i = 0; i < text.length; i += 1800) {
+    currentChunks.push(text.slice(i, i + 1800))
+  }
 
+  // lấy vị trí từ bar
+  const progressBar = document.getElementById("progressBar")
+  currentAbsoluteCharIndex = parseInt(progressBar.value || "0")
+
+  let total = 0
+  for (let i = 0; i < currentChunks.length; i++) {
+    const len = currentChunks[i].length
+    if (currentAbsoluteCharIndex < total + len) {
+      currentChunkIndex = i
+      currentCharIndex = currentAbsoluteCharIndex - total
+      break
+    }
+    total += len
+  }
+
+  speakLongText(text, true)
 }
 
 function pauseRead(){
   speechSynthesis.pause()
 }
 
-function resumeRead(){
-  speechSynthesis.resume()
+function resumeRead() {
+  if (speechSynthesis.paused) {
+    speechSynthesis.resume()
+    return
+  }
+
+  currentChunkIndex = parseInt(localStorage.getItem("reading_chunk") || "0")
+  currentCharIndex = parseInt(localStorage.getItem("reading_char") || "0")
+
+  speakNextFromCurrent()
 }
 
 function stopRead(){
   speechSynthesis.cancel()
+}
+
+function restartRead() {
+  stopRead()
+
+  currentChunkIndex = 0
+  currentCharIndex = 0
+  currentWordIndex = 0
+
+  localStorage.removeItem("reading_chunk")
+  localStorage.removeItem("reading_char")
+
+  readChapter()
 }
 let voices = []
 
@@ -784,6 +1066,27 @@ window.addEventListener("scroll", () => {
 
   lastScroll = current
 })
+function applyVoiceSettings() {
+  const voiceIndex = document.getElementById("voiceSelect").value
+  const rate = document.getElementById("rateInput").value
+  const pitch = document.getElementById("pitchInput").value
+
+  localStorage.setItem("voice_index", voiceIndex)
+  localStorage.setItem("voice_rate", rate)
+  localStorage.setItem("voice_pitch", pitch)
+
+  rateValue.innerText = rate
+  pitchValue.innerText = pitch
+
+  // nếu đang đọc thì đọc lại với setting mới
+  if (speechSynthesis.speaking) {
+    speechSynthesis.cancel()
+    speakNextFromCurrent()
+  }
+}
+document.getElementById("voiceSelect").addEventListener("change", applyVoiceSettings)
+rateInput.addEventListener("input", applyVoiceSettings)
+pitchInput.addEventListener("input", applyVoiceSettings)
 </script>
 <script>
   if ('serviceWorker' in navigator) {
