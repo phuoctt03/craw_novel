@@ -1,1187 +1,1091 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Novel Chapter Reader</title>
-<link rel="manifest" href="manifest.json" />
-<style>
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  min-height: 100vh;
-  padding: 20px;
-}
-
-.container {
-  max-width: 900px;
-  margin: 0 auto;
-  background: white;
-  border-radius: 16px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-  overflow: hidden;
-}
-
-.header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  padding: 30px;
-  text-align: center;
-}
-
-.header h2 {
-  font-size: 28px;
-  font-weight: 600;
-  margin-bottom: 10px;
-}
-
-.header p {
-  font-size: 14px;
-  opacity: 0.9;
-  letter-spacing: 0.5px;
-}
-
-.content {
-  padding: 30px;
-}
-
-.input-section {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 30px;
-  flex-wrap: wrap;
-}
-
-#urlInput {
-  flex: 1;
-  min-width: 200px;
-  padding: 12px 16px;
-  border: 2px solid #e5e7eb;
-  border-radius: 8px;
-  font-size: 14px;
-  transition: all 0.3s ease;
-}
-
-#urlInput:focus {
-  outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-}
-
-.button-group {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-button {
-  padding: 12px 24px;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-button.primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-}
-
-button.primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
-}
-
-button.primary:active {
-  transform: translateY(0);
-}
-
-button.secondary {
-  background: #f3f4f6;
-  color: #374151;
-  border: 2px solid #e5e7eb;
-}
-
-button.secondary:hover {
-  background: #e5e7eb;
-  border-color: #d1d5db;
-}
-
-#loading {
-  text-align: center;
-  color: #667eea;
-  font-weight: 600;
-  margin: 20px 0;
-  min-height: 20px;
-  animation: pulse 1.5s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 0.6; }
-  50% { opacity: 1; }
-}
-
-#title {
-  font-size: 28px;
-  font-weight: 700;
-  color: #1f2937;
-  margin: 30px 0 20px 0;
-  border-left: 4px solid #667eea;
-  padding-left: 16px;
-}
-
-#content {
-  white-space: pre-wrap;
-  line-height: 1.8;
-  color: #374151;
-  font-size: 16px;
-  background: #f9fafb;
-  padding: 20px;
-  border-radius: 8px;
-  border-left: 4px solid #667eea;
-  overflow-x: auto;
-}
-
-.popup {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  backdrop-filter: blur(4px);
-}
-
-.popup.hidden {
-  display: none;
-}
-
-.popup-box {
-  background: white;
-  padding: 32px;
-  width: 90%;
-  max-width: 420px;
-  border-radius: 16px;
-  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
-  animation: slideIn 0.3s ease;
-}
-
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateY(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.popup-box h3 {
-  font-size: 20px;
-  color: #1f2937;
-  margin-bottom: 20px;
-  font-weight: 600;
-}
-
-#backendInput {
-  width: 100%;
-  padding: 12px 16px;
-  border: 2px solid #e5e7eb;
-  border-radius: 8px;
-  font-size: 14px;
-  margin-bottom: 24px;
-  transition: all 0.3s ease;
-}
-
-#backendInput:focus {
-  outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-}
-
-.popup-buttons {
-  display: flex;
-  gap: 12px;
-}
-
-.popup-buttons button {
-  flex: 1;
-}
-
-button.danger {
-  background: #ef4444;
-  color: white;
-}
-
-button.danger:hover {
-  background: #dc2626;
-  transform: translateY(-2px);
-  box-shadow: 0 10px 20px rgba(239, 68, 68, 0.3);
-}
-
-/* Voice settings */
-.popup-box hr {
-  margin: 24px 0;
-  border: none;
-  border-top: 1px solid #e5e7eb;
-}
-
-.popup-box label {
-  display: block;
-  font-size: 13px;
-  font-weight: 600;
-  color: #374151;
-  margin-bottom: 6px;
-}
-
-#voiceSelect {
-  width: 100%;
-  padding: 12px 16px;
-  border: 2px solid #e5e7eb;
-  border-radius: 8px;
-  font-size: 14px;
-  margin-bottom: 16px;
-  background: white;
-  transition: all 0.3s ease;
-}
-
-#voiceSelect:focus {
-  outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-}
-
-#rateInput,
-#pitchInput {
-  width: 100%;
-  margin-bottom: 16px;
-  appearance: none;
-  height: 6px;
-  border-radius: 999px;
-  background: #e5e7eb;
-  outline: none;
-  transition: all 0.2s ease;
-}
-
-/* slider thumb */
-#rateInput::-webkit-slider-thumb,
-#pitchInput::-webkit-slider-thumb {
-  appearance: none;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: #667eea;
-  cursor: pointer;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-  transition: 0.2s;
-}
-
-#rateInput::-webkit-slider-thumb:hover,
-#pitchInput::-webkit-slider-thumb:hover {
-  transform: scale(1.2);
-}
-
-/* Firefox */
-#rateInput::-moz-range-thumb,
-#pitchInput::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: #667eea;
-  cursor: pointer;
-}
-
-.chapter-nav {
-  position: fixed;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-
-  background: white;
-  padding: 10px 12px;
-  border-radius: 12px;
-
-  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-
-  display: flex;
-  gap: 10px;
-  align-items: center;
-
-  z-index: 999;
-
-  backdrop-filter: blur(10px);
-  background: rgba(255,255,255,0.9);
-}
-
-#chapterSelect {
-  flex: 1;
-  padding: 12px 16px;
-  border: 2px solid #e5e7eb;
-  border-radius: 8px;
-  font-size: 14px;
-  background: white;
-  transition: all 0.3s ease;
-}
-
-#chapterSelect:focus {
-  outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-}
-
-.highlight-word {
-  background: #667eea;
-  color: white;
-  border-radius: 4px;
-}
-
-#progressContainer {
-  position: fixed;
-  bottom: 85px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: min(700px, 90%);
-  z-index: 1000;
-
-  background: rgba(255,255,255,0.88);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-
-  border: 1px solid rgba(255,255,255,0.4);
-  border-radius: 16px;
-  padding: 12px 16px;
-
-  box-shadow:
-    0 8px 30px rgba(0,0,0,0.12),
-    inset 0 1px 0 rgba(255,255,255,0.6);
-}
-
-#progressText {
-  display: block;
-  font-size: 13px;
-  font-weight: 600;
-  color: #374151;
-  margin-bottom: 8px;
-}
-
-#progressBar {
-  width: 100%;
-  appearance: none;
-  -webkit-appearance: none;
-  height: 10px;
-  border-radius: 999px;
-  outline: none;
-  cursor: pointer;
-  --progress: 0%;
-
-  background: linear-gradient(
-    to right,
-    #6366f1 0%,
-    #8b5cf6 var(--progress),
-    #e5e7eb var(--progress),
-    #e5e7eb 100%
-  );
-
-  transition: background 0.15s ease;
-}
-
-#progressBar::-webkit-slider-thumb {
-  appearance: none;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: white;
-  border: 4px solid #6366f1;
-  cursor: pointer;
-
-  box-shadow:
-    0 4px 10px rgba(99,102,241,0.35),
-    0 0 0 6px rgba(99,102,241,0.12);
-
-  transition: transform 0.15s ease;
-}
-
-#progressBar::-webkit-slider-thumb:hover {
-  transform: scale(1.12);
-}
-
-#progressBar::-moz-range-thumb {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: white;
-  border: 4px solid #6366f1;
-  cursor: pointer;
-}
-
-.speech-loading {
-  position: fixed;
-  top: 24px;
-  right: 24px;
-  z-index: 9999;
-
-  display: flex;
-  align-items: center;
-  gap: 12px;
-
-  padding: 14px 20px;
-  min-width: 240px;
-
-  color: white;
-  font-size: 14px;
-  font-weight: 700;
-  letter-spacing: 0.3px;
-
-  border-radius: 16px;
-
-  background: linear-gradient(
-    135deg,
-    rgba(79,70,229,0.96),
-    rgba(124,58,237,0.96)
-  );
-
-  box-shadow:
-    0 10px 30px rgba(79,70,229,0.45),
-    0 0 20px rgba(124,58,237,0.35),
-    inset 0 1px 0 rgba(255,255,255,0.25);
-
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-
-  animation: slideGlowIn 0.35s ease, pulseGlow 1.2s infinite;
-}
-
-.hidden {
-  display: none !important;
-}
-
-@media (max-width: 600px) {
-  .header {
-    padding: 20px;
-  }
-
-  .header h2 {
-    font-size: 24px;
-  }
-
-  .content {
-    padding: 20px;
-  }
-
-  #title {
-    font-size: 22px;
-  }
-
-  #content {
-    font-size: 15px;
-  }
-
-  .input-section {
-    flex-direction: column;
-  }
-
-  #urlInput {
-    min-width: 100%;
-  }
-
-  .button-group {
-    width: 100%;
-  }
-
-  .button-group button {
-    flex: 1;
-  }
-
-  .chapter-nav {
-    left: 10px;
-    right: 10px;
-    transform: none;
-
-    justify-content: space-between;
-    border-radius: 12px;
-    padding: 8px;
-  }
-
-  /* select chiếm space vừa đủ */
-  #chapterSelect {
-    flex: 1;
-    max-width: none;
-    font-size: 12px;
-  }
-
-  /* button nhỏ gọn */
-  .chapter-nav button {
-    padding: 6px 10px;
-    font-size: 12px;
-  }
-}
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Đọc Truyện Online</title>
+  <link rel="manifest" href="manifest.json" />
+
+  <style>
+    /* ─── Reset ─────────────────────────────────────────────── */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    /* ─── Base ───────────────────────────────────────────────── */
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto',
+        'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    /* ─── Layout ─────────────────────────────────────────────── */
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      overflow: hidden;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 30px;
+      text-align: center;
+    }
+
+    .header h2 {
+      font-size: 28px;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+
+    .header p {
+      font-size: 14px;
+      opacity: 0.9;
+      letter-spacing: 0.5px;
+    }
+
+    .content {
+      padding: 30px;
+    }
+
+    .input-section {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 30px;
+      flex-wrap: wrap;
+    }
+
+    /* ─── URL Input ──────────────────────────────────────────── */
+    #urlInput {
+      flex: 1;
+      min-width: 200px;
+      padding: 12px 16px;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      font-size: 14px;
+      transition: all 0.3s ease;
+    }
+
+    #urlInput:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    /* ─── Buttons ────────────────────────────────────────────── */
+    .button-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    button.primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    button.primary:hover  { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3); }
+    button.primary:active { transform: translateY(0); }
+
+    button.secondary {
+      background: #f3f4f6;
+      color: #374151;
+      border: 2px solid #e5e7eb;
+    }
+
+    button.secondary:hover {
+      background: #e5e7eb;
+      border-color: #d1d5db;
+    }
+
+    button.danger { background: #ef4444; color: white; }
+    button.danger:hover {
+      background: #dc2626;
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(239, 68, 68, 0.3);
+    }
+
+    /* ─── Loading / Title / Content ─────────────────────────── */
+    #loading {
+      text-align: center;
+      color: #667eea;
+      font-weight: 600;
+      margin: 20px 0;
+      min-height: 20px;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.6; }
+      50%       { opacity: 1; }
+    }
+
+    #title {
+      font-size: 28px;
+      font-weight: 700;
+      color: #1f2937;
+      margin: 30px 0 20px;
+      border-left: 4px solid #667eea;
+      padding-left: 16px;
+    }
+
+    #content {
+      white-space: pre-wrap;
+      line-height: 1.8;
+      color: #374151;
+      font-size: 16px;
+      background: #f9fafb;
+      padding: 20px;
+      border-radius: 8px;
+      border-left: 4px solid #667eea;
+      overflow-x: auto;
+    }
+
+    .highlight-word {
+      background: #667eea;
+      color: white;
+      border-radius: 4px;
+    }
+
+    /* ─── Settings Popup ─────────────────────────────────────── */
+    .popup {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      backdrop-filter: blur(4px);
+    }
+
+    .popup-box {
+      background: white;
+      padding: 32px;
+      width: 90%;
+      max-width: 420px;
+      border-radius: 16px;
+      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+      animation: slideIn 0.3s ease;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .popup-box h3 {
+      font-size: 20px;
+      color: #1f2937;
+      margin-bottom: 20px;
+      font-weight: 600;
+    }
+
+    .popup-box hr {
+      margin: 24px 0;
+      border: none;
+      border-top: 1px solid #e5e7eb;
+    }
+
+    .popup-box label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 6px;
+    }
+
+    .popup-buttons {
+      display: flex;
+      gap: 12px;
+    }
+
+    .popup-buttons button { flex: 1; }
+
+    /* ─── Form Controls (popup) ──────────────────────────────── */
+    #backendInput,
+    #voiceSelect {
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      font-size: 14px;
+      margin-bottom: 16px;
+      background: white;
+      transition: all 0.3s ease;
+    }
+
+    #backendInput { margin-bottom: 24px; }
+
+    #backendInput:focus,
+    #voiceSelect:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    /* ─── Sliders ────────────────────────────────────────────── */
+    #rateInput,
+    #pitchInput {
+      width: 100%;
+      margin-bottom: 16px;
+      appearance: none;
+      height: 6px;
+      border-radius: 999px;
+      background: #e5e7eb;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    #rateInput::-webkit-slider-thumb,
+    #pitchInput::-webkit-slider-thumb {
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #667eea;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+      transition: transform 0.2s;
+    }
+
+    #rateInput::-webkit-slider-thumb:hover,
+    #pitchInput::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+
+    /* Firefox */
+    #rateInput::-moz-range-thumb,
+    #pitchInput::-moz-range-thumb {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #667eea;
+      cursor: pointer;
+    }
+
+    /* ─── Chapter Nav (fixed bottom bar) ─────────────────────── */
+    .chapter-nav {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 999;
+
+      display: flex;
+      gap: 10px;
+      align-items: center;
+
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    }
+
+    #chapterSelect {
+      flex: 1;
+      padding: 12px 16px;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      font-size: 14px;
+      background: white;
+      transition: all 0.3s ease;
+    }
+
+    #chapterSelect:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    /* ─── Progress Bar (fixed above nav) ─────────────────────── */
+    #progressContainer {
+      position: fixed;
+      bottom: 85px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(700px, 90%);
+      z-index: 1000;
+
+      padding: 12px 16px;
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      background: rgba(255, 255, 255, 0.88);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12),
+                  inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    }
+
+    #progressText {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 8px;
+    }
+
+    #progressBar {
+      width: 100%;
+      appearance: none;
+      -webkit-appearance: none;
+      height: 10px;
+      border-radius: 999px;
+      outline: none;
+      cursor: pointer;
+      --progress: 0%;
+      background: linear-gradient(
+        to right,
+        #6366f1 0%,
+        #8b5cf6 var(--progress),
+        #e5e7eb var(--progress),
+        #e5e7eb 100%
+      );
+      transition: background 0.15s ease;
+    }
+
+    #progressBar::-webkit-slider-thumb {
+      appearance: none;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: white;
+      border: 4px solid #6366f1;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(99, 102, 241, 0.35),
+                  0 0 0 6px rgba(99, 102, 241, 0.12);
+      transition: transform 0.15s ease;
+    }
+
+    #progressBar::-webkit-slider-thumb:hover { transform: scale(1.12); }
+
+    #progressBar::-moz-range-thumb {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: white;
+      border: 4px solid #6366f1;
+      cursor: pointer;
+    }
+
+    /* ─── Speech Loading Toast ───────────────────────────────── */
+    .speech-loading {
+      position: fixed;
+      top: 24px;
+      right: 24px;
+      z-index: 9999;
+
+      display: flex;
+      align-items: center;
+      gap: 12px;
+
+      padding: 14px 20px;
+      min-width: 240px;
+      border-radius: 16px;
+
+      color: white;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+
+      background: linear-gradient(135deg, rgba(79, 70, 229, 0.96), rgba(124, 58, 237, 0.96));
+      box-shadow: 0 10px 30px rgba(79, 70, 229, 0.45),
+                  0 0 20px rgba(124, 58, 237, 0.35),
+                  inset 0 1px 0 rgba(255, 255, 255, 0.25);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+
+      animation: slideGlowIn 0.35s ease, pulseGlow 1.2s infinite;
+    }
+
+    /* ─── Utility ────────────────────────────────────────────── */
+    .hidden { display: none !important; }
+
+    /* ─── Responsive ─────────────────────────────────────────── */
+    @media (max-width: 600px) {
+      .header       { padding: 20px; }
+      .header h2    { font-size: 24px; }
+      .content      { padding: 20px; }
+      #title        { font-size: 22px; }
+      #content      { font-size: 15px; }
+
+      .input-section        { flex-direction: column; }
+      #urlInput             { min-width: 100%; }
+      .button-group         { width: 100%; }
+      .button-group button  { flex: 1; }
+
+      .chapter-nav {
+        left: 10px;
+        right: 10px;
+        transform: none;
+        justify-content: space-between;
+        border-radius: 12px;
+        padding: 8px;
+      }
+
+      #chapterSelect        { flex: 1; max-width: none; font-size: 12px; }
+      .chapter-nav button   { padding: 6px 10px; font-size: 12px; }
+    }
+  </style>
 </head>
 
 <body>
 
-<div class="container">
-  <div class="header">
-    <h2>📖 Novel Chapter Reader</h2>
-    <p>Fetch and read your favorite chapters with ease</p>
-  </div>
-
-  <div class="content">
-    <div class="input-section">
-      <input id="urlInput" placeholder="Paste chapter URL here..." />
-      <div class="chapter-nav">
-        <button class="secondary" onclick="goPrev()">⬅ Prev</button>
-
-        <select id="chapterSelect"></select>
-
-        <button class="secondary" onclick="goNext()">Next ➡</button>
-      </div>
-      <div class="button-group">
-        <button class="primary" onclick="fetchChapter()">🔄 Fetch Chapter</button>
-        <button class="secondary" onclick="openBackendPopup()">⚙️ Settings</button>
-
-        <button class="secondary" onclick="readChapter()">🔊 Read</button>
-        <button class="secondary" onclick="pauseRead()">⏸ Pause</button>
-        <button class="secondary" onclick="resumeRead()">▶ Resume</button>
-        <button class="secondary" onclick="stopRead()">⏹ Stop</button>
-        <button class="secondary" onclick="restartRead()">🔁 Restart</button>
-      </div>
-      <div id="progressContainer">
-        <span id="progressText">0 / 0</span>
-        <input id="progressBar" type="range" min="0" value="0">
-      </div>
-      <div id="speechLoading" class="speech-loading hidden">
-        🔊 Preparing voice...
-      </div>
+  <!-- ── Main Card ─────────────────────────────────────────── -->
+  <div class="container">
+    <div class="header">
+      <h2>📖 Đọc Truyện Online</h2>
+      <p>Dán link chương truyện và thưởng thức nội dung ngay tại đây</p>
     </div>
 
-    <div id="loading"></div>
-    <div id="title"></div>
-    <div id="content"></div>
-  </div>
-</div>
+    <div class="content">
+      <div class="input-section">
+        <input id="urlInput" placeholder="Dán link chương truyện vào đây..." />
+        <div class="button-group">
+          <button class="primary"    onclick="fetchChapter()">🔄 Tải chương</button>
+          <button class="secondary"  onclick="openBackendPopup()">⚙️ Cài đặt</button>
+          <button class="secondary"  onclick="readChapter()">🔊 Đọc</button>
+          <button class="secondary"  onclick="pauseRead()">⏸ Tạm dừng</button>
+          <button class="secondary"  onclick="resumeRead()">▶ Tiếp tục</button>
+          <button class="secondary"  onclick="stopRead()">⏹ Dừng</button>
+          <button class="secondary"  onclick="restartRead()">🔁 Đọc lại</button>
+        </div>
+      </div>
 
-<!-- Backend Popup -->
-<div id="backendPopup" class="popup hidden">
-  <div class="popup-box">
-    <h3>⚙️ Backend Configuration</h3>
-    <p style="color: #6b7280; margin-bottom: 16px; font-size: 14px;">Enter your backend server URL</p>
-    <input id="backendInput" placeholder="http://localhost:3000" />
-    <hr style="margin:20px 0; border:none; border-top:1px solid #eee;" />
-
-    <h3>🔊 Voice Settings</h3>
-
-    <select id="voiceSelect" style="width:100%; padding:12px; margin-bottom:12px;"></select>
-
-    <label>Tốc độ (Rate): <span id="rateValue">1</span></label>
-    <input id="rateInput" type="range" min="0.5" max="2" step="0.1" value="1" />
-
-    <label>Cao độ (Pitch): <span id="pitchValue">1</span></label>
-    <input id="pitchInput" type="range" min="0" max="2" step="0.1" value="1" />
-    <div class="popup-buttons">
-      <button class="secondary" onclick="closeBackendPopup()">Cancel</button>
-      <button class="primary" onclick="saveBackend()">Save</button>
+      <div id="loading"></div>
+      <div id="title"></div>
+      <div id="content"></div>
     </div>
   </div>
-</div>
 
-<script>
+  <!-- ── Chapter Nav (fixed bottom) ────────────────────────── -->
+  <div class="chapter-nav">
+    <button class="secondary" onclick="goPrev()">⬅ Chương trước</button>
+    <select id="chapterSelect"></select>
+    <button class="secondary" onclick="goNext()">Chương sau ➡</button>
+  </div>
 
-let backend = localStorage.getItem("backend_url")
-let chapters = []
-let currentIndex = -1
+  <!-- ── Progress Bar (fixed, above nav) ───────────────────── -->
+  <div id="progressContainer">
+    <span id="progressText">0 / 0</span>
+    <input id="progressBar" type="range" min="0" value="0" />
+  </div>
 
-// first time setup
-if(!backend){
-  document.getElementById("backendPopup").classList.remove("hidden")
-}
+  <!-- ── Speech Loading Toast (fixed top-right) ────────────── -->
+  <div id="speechLoading" class="speech-loading hidden">
+    🔊 Đang chuẩn bị giọng đọc...
+  </div>
 
-// open popup
-function openBackendPopup(){
-  document.getElementById("backendInput").value = backend || ""
+  <!-- ── Settings Popup ────────────────────────────────────── -->
+  <div id="backendPopup" class="popup hidden">
+    <div class="popup-box">
+      <h3>⚙️ Cấu hình Backend</h3>
+      <p style="color:#6b7280; margin-bottom:16px; font-size:14px;">
+        Nhập URL của máy chủ backend
+      </p>
+      <input id="backendInput" placeholder="http://localhost:3000" />
 
-  document.getElementById("rateInput").value = localStorage.getItem("voice_rate") || 1
-  document.getElementById("pitchInput").value = localStorage.getItem("voice_pitch") || 1
+      <hr />
 
-  loadVoices()
+      <h3>🔊 Cài đặt giọng đọc</h3>
+      <select id="voiceSelect"></select>
 
-  document.getElementById("backendPopup").classList.remove("hidden")
-}
+      <label>Tốc độ: <span id="rateValue">1</span></label>
+      <input id="rateInput" type="range" min="0.5" max="2" step="0.1" value="1" />
 
-// close popup
-function closeBackendPopup(){
-  document.getElementById("backendPopup").classList.add("hidden")
-}
+      <label>Cao độ: <span id="pitchValue">1</span></label>
+      <input id="pitchInput" type="range" min="0" max="2" step="0.1" value="1" />
 
-// save backend
-function saveBackend(){
-  const value = document.getElementById("backendInput").value.trim()
+      <div class="popup-buttons">
+        <button class="secondary" onclick="closeBackendPopup()">Huỷ</button>
+        <button class="primary"   onclick="saveBackend()">Lưu</button>
+      </div>
+    </div>
+  </div>
 
-  if(!value){
-    alert("⚠️ Please enter a valid backend URL")
-    return
-  }
+  <script>
+    /* ═══════════════════════════════════════════════════════════
+       STATE
+    ═══════════════════════════════════════════════════════════ */
+    let backend      = localStorage.getItem('backend_url')
+    let chapters     = []
+    let currentIndex = -1
 
-  backend = value
-  localStorage.setItem("backend_url", value)
+    // Speech state
+    let currentSpeech            = null
+    let currentChunks            = []
+    let currentText              = ''
+    let currentChunkIndex        = 0
+    let currentCharIndex         = 0
+    let currentWordIndex         = 0
+    let currentAbsoluteCharIndex = 0
+    let isDraggingProgress       = false
+    let lastHighlight            = 0
+    let voices                   = []
+    let needsDelay               = false  // tracks if cancel() was called and speak() needs a delay
+    let progressTimer            = null   // fallback timer when onboundary doesn't fire
+    let boundaryFired            = false  // flag: onboundary is working on this device
 
-  // save voice settings
-  const voiceIndex = document.getElementById("voiceSelect").value
-  const rate = document.getElementById("rateInput").value
-  const pitch = document.getElementById("pitchInput").value
-
-  localStorage.setItem("voice_index", voiceIndex)
-  localStorage.setItem("voice_rate", rate)
-  localStorage.setItem("voice_pitch", pitch)
-
-  closeBackendPopup()
-}
-
-function initProgressBar() {
-  const progressBar = document.getElementById("progressBar")
-
-  progressBar.min = 0
-  progressBar.max = currentText.length
-  progressBar.value = 0
-  progressBar.style.setProperty("--progress", "0%")
-
-  document.getElementById("progressText").innerText =
-    `0 / ${currentText.length}`
-}
-
-function renderContentWithSpans(text) {
-  const contentEl = document.getElementById("content")
-
-  const words = text.split(/(\s+)/)
-
-  let wordIndex = 0
-
-  contentEl.innerHTML = words.map(part => {
-    if (part === "\n") return "<br>"
-    if (/^\s+$/.test(part)) return part
-
-    const html = `<span id="word-${wordIndex}">${part}</span>`
-    wordIndex++
-    return html
-  }).join("")
-}
-
-// fetch chapter
-async function fetchChapter(){
-  stopRead()
-  const url = document.getElementById("urlInput").value.trim()
-
-  if(!url){
-    alert("⚠️ Please enter a chapter URL")
-    return
-  }
-
-  localStorage.setItem("last_chapter_url", url)
-
-  if(!backend){
-    alert("⚠️ Backend not configured. Please set it in Settings.")
-    return
-  }
-
-  document.getElementById("loading").innerText = "⏳ Loading chapter..."
-  document.getElementById("title").innerText = ""
-  document.getElementById("content").innerText = ""
-
-  try{
-    const api = backend + "/chapter?url=" + encodeURIComponent(url)
-    const res = await fetch(api)
-
-    if(!res.ok){
-      throw new Error("HTTP " + res.status)
+    // First-time setup
+    if (!backend) {
+      document.getElementById('backendPopup').classList.remove('hidden')
     }
 
-    const data = await res.json()
-
-    document.getElementById("title").innerText = data.title || "Chapter"
-    renderContentWithSpans(data.content || "No content found")
-
-    currentText = data.content || "No content found"
-    currentChunks = []
-    for (let i = 0; i < currentText.length; i += 1800) {
-      currentChunks.push(currentText.slice(i, i + 1800))
+    /* ═══════════════════════════════════════════════════════════
+       DOM HELPERS
+    ═══════════════════════════════════════════════════════════ */
+    function showSpeechLoading(text = '🔊 Đang chuẩn bị giọng đọc...') {
+      const el = document.getElementById('speechLoading')
+      el.innerText = text
+      el.classList.remove('hidden')
     }
-    initProgressBar()
 
-    chapters = data.chapters || []
+    function hideSpeechLoading() {
+      document.getElementById('speechLoading').classList.add('hidden')
+    }
 
-    const currentUrl = url
+    function clearProgressTimer() {
+      if (progressTimer) {
+        clearInterval(progressTimer)
+        progressTimer = null
+      }
+    }
 
-    currentIndex = chapters.findIndex(ch => currentUrl.includes(ch.chapter))
+    /* ═══════════════════════════════════════════════════════════
+       SETTINGS POPUP
+    ═══════════════════════════════════════════════════════════ */
+    function openBackendPopup() {
+      document.getElementById('backendInput').value  = backend || ''
+      document.getElementById('rateInput').value     = localStorage.getItem('voice_rate')  || 1
+      document.getElementById('pitchInput').value    = localStorage.getItem('voice_pitch') || 1
+      loadVoices()
+      document.getElementById('backendPopup').classList.remove('hidden')
+    }
 
-    renderChapterSelect()
-    updateNavButtons()
-  }catch(e){
-    alert("❌ Error: " + e.message)
-    document.getElementById("content").innerText = ""
-  }
+    function closeBackendPopup() {
+      document.getElementById('backendPopup').classList.add('hidden')
+    }
 
-  document.getElementById("loading").innerText = ""
-}
+    function saveBackend() {
+      const value = document.getElementById('backendInput').value.trim()
+      if (!value) {
+        alert('⚠️ Vui lòng nhập URL backend hợp lệ')
+        return
+      }
 
-// Allow Enter key to fetch
-document.getElementById("urlInput").addEventListener("keypress", function(e) {
-  if(e.key === "Enter") {
-    fetchChapter()
-  }
-})
+      backend = value
+      localStorage.setItem('backend_url', value)
+      localStorage.setItem('voice_index', document.getElementById('voiceSelect').value)
+      localStorage.setItem('voice_rate',  document.getElementById('rateInput').value)
+      localStorage.setItem('voice_pitch', document.getElementById('pitchInput').value)
 
-function highlightCurrentWord(index) {
-  const old = document.querySelector(".highlight-word")
-  if (old) old.classList.remove("highlight-word")
+      closeBackendPopup()
+    }
 
-  const el = document.getElementById("word-" + index)
-  if (el) {
-    el.classList.add("highlight-word")
-    el.scrollIntoView({
-      behavior: "smooth",
-      block: "center"
+    function loadVoices() {
+      voices = speechSynthesis.getVoices()
+
+      const select = document.getElementById('voiceSelect')
+      select.innerHTML = ''
+
+      voices.forEach((voice, index) => {
+        const opt = document.createElement('option')
+        opt.value       = index
+        opt.textContent = `${voice.name} (${voice.lang})`
+        select.appendChild(opt)
+      })
+
+      const saved = localStorage.getItem('voice_index')
+      if (saved) select.value = saved
+    }
+
+    function applyVoiceSettings() {
+      const voiceIndex = document.getElementById('voiceSelect').value
+      const rate       = document.getElementById('rateInput').value
+      const pitch      = document.getElementById('pitchInput').value
+
+      localStorage.setItem('voice_index', voiceIndex)
+      localStorage.setItem('voice_rate',  rate)
+      localStorage.setItem('voice_pitch', pitch)
+
+      document.getElementById('rateValue').innerText  = rate
+      document.getElementById('pitchValue').innerText = pitch
+
+      // Re-read with new settings if already speaking
+      if (speechSynthesis.speaking) {
+        speechSynthesis.cancel()
+        needsDelay = true
+        setTimeout(speakNextFromCurrent, 150)
+      }
+    }
+
+    // Chrome fires this event when voices load async
+    speechSynthesis.onvoiceschanged = loadVoices
+
+    /* ═══════════════════════════════════════════════════════════
+       FETCH & RENDER
+    ═══════════════════════════════════════════════════════════ */
+    function renderContentWithSpans(text) {
+      let wordIndex = 0
+      document.getElementById('content').innerHTML = text.split(/(\s+)/).map(part => {
+        if (part === '\n')      return '<br>'
+        if (/^\s+$/.test(part)) return part
+        return `<span id="word-${wordIndex++}">${part}</span>`
+      }).join('')
+    }
+
+    function buildChunks(text, chunkSize = 1800) {
+      const chunks = []
+      for (let i = 0; i < text.length; i += chunkSize) {
+        chunks.push(text.slice(i, i + chunkSize))
+      }
+      return chunks
+    }
+
+    async function fetchChapter() {
+      stopRead()
+
+      const url = document.getElementById('urlInput').value.trim()
+      if (!url) { alert('⚠️ Vui lòng nhập link chương truyện'); return }
+
+      localStorage.setItem('last_chapter_url', url)
+
+      if (!backend) { alert('⚠️ Chưa cấu hình backend. Vui lòng vào Cài đặt.'); return }
+
+      document.getElementById('loading').innerText = '⏳ Đang tải chương...'
+      document.getElementById('title').innerText   = ''
+      document.getElementById('content').innerText = ''
+
+      try {
+        const res  = await fetch(`${backend}/chapter?url=${encodeURIComponent(url)}`)
+        if (!res.ok) throw new Error('HTTP ' + res.status)
+
+        const data = await res.json()
+
+        document.getElementById('title').innerText = data.title || 'Chương'
+        renderContentWithSpans(data.content || 'Không tìm thấy nội dung')
+
+        currentText   = data.content || 'Không tìm thấy nội dung'
+        currentChunks = buildChunks(currentText)
+        initProgressBar()
+
+        chapters     = data.chapters || []
+        currentIndex = chapters.findIndex(ch => url.includes(ch.chapter))
+
+        renderChapterSelect()
+        updateNavButtons()
+      } catch (e) {
+        alert('❌ Lỗi: ' + e.message)
+        document.getElementById('content').innerText = ''
+      }
+
+      document.getElementById('loading').innerText = ''
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       SPEECH ENGINE
+    ═══════════════════════════════════════════════════════════ */
+    function getWordIndexFromCharIndex(charIndex, text) {
+      return text.slice(0, charIndex).trim().split(/\s+/).length - 1
+    }
+
+    function speakNextFromCurrent() {
+      if (currentChunkIndex >= currentChunks.length) return
+
+      const resumeOffset = currentCharIndex  // capture slice offset before any updates
+      const chunk        = currentChunks[currentChunkIndex].slice(resumeOffset)
+      const voiceIndex   = localStorage.getItem('voice_index')
+      const rate         = parseFloat(localStorage.getItem('voice_rate')  || '1')
+      const pitch        = parseFloat(localStorage.getItem('voice_pitch') || '1')
+
+      const speech = new SpeechSynthesisUtterance(chunk)
+
+      if (voices[voiceIndex]) {
+        speech.voice = voices[voiceIndex]
+        speech.lang  = voices[voiceIndex].lang
+      } else {
+        speech.lang = 'vi-VN'
+      }
+
+      speech.rate  = rate
+      speech.pitch = pitch
+
+      speech.onboundary = (event) => {
+        if (!boundaryFired) {
+          boundaryFired = true
+          clearProgressTimer()  // onboundary is working — stop the fallback timer
+        }
+
+        // event.charIndex is relative to the sliced chunk, add resumeOffset for absolute position
+        const charInChunk = resumeOffset + event.charIndex
+
+        currentCharIndex         = charInChunk
+        currentAbsoluteCharIndex = currentChunks.slice(0, currentChunkIndex).join('').length + charInChunk
+        currentWordIndex         = getWordIndexFromCharIndex(currentAbsoluteCharIndex, currentText)
+
+        const now = Date.now()
+        if (now - lastHighlight > 100) {
+          highlightCurrentWord(currentWordIndex)
+          updateProgress()
+          lastHighlight = now
+        }
+
+        localStorage.setItem('reading_chunk', currentChunkIndex)
+        localStorage.setItem('reading_char',  currentCharIndex)
+      }
+
+      speech.onstart = () => {
+        hideSpeechLoading()
+
+        // Fallback: nếu onboundary không fire (Linux/Android/một số voice),
+        // dùng timer ước tính vị trí theo tốc độ đọc (~6 ký tự/giây ở rate=1)
+        const startTime  = Date.now()
+        const charsPerMs = (6 * rate) / 1000
+
+        clearProgressTimer()
+        boundaryFired = false
+
+        setTimeout(() => {
+          if (boundaryFired) return  // onboundary đang hoạt động, không cần timer
+
+          progressTimer = setInterval(() => {
+            if (!speechSynthesis.speaking || speechSynthesis.paused) {
+              clearProgressTimer()
+              return
+            }
+
+            const estimated = resumeOffset + Math.round((Date.now() - startTime) * charsPerMs)
+            const clamped   = Math.min(estimated, resumeOffset + chunk.length - 1)
+
+            currentCharIndex         = clamped
+            currentAbsoluteCharIndex = currentChunks.slice(0, currentChunkIndex).join('').length + clamped
+            currentWordIndex         = getWordIndexFromCharIndex(currentAbsoluteCharIndex, currentText)
+
+            highlightCurrentWord(currentWordIndex)
+            updateProgress()
+          }, 250)
+        }, 600)  // chờ 600ms để xem onboundary có fire không
+      }
+
+      speech.onend = () => {
+        clearProgressTimer()
+
+        currentChunkIndex++
+        currentCharIndex = 0
+        currentWordIndex = 0
+
+        localStorage.setItem('reading_chunk', currentChunkIndex)
+        localStorage.setItem('reading_char',  0)
+
+        if (currentChunkIndex >= currentChunks.length) {
+          // Auto-advance: wait for fetchChapter() inside goNext() to finish
+          goNext().then(() => {
+            if (currentText && currentChunks.length) restartRead()
+          })
+          return
+        }
+
+        speakNextFromCurrent()
+      }
+
+      currentSpeech = speech
+      speechSynthesis.speak(speech)
+    }
+
+    function speakLongText(text, resume = false) {
+      const wasSpeaking = speechSynthesis.speaking || speechSynthesis.paused
+
+      if (wasSpeaking) {
+        speechSynthesis.cancel()
+        needsDelay = true
+      }
+
+      currentText = text
+
+      if (!resume) {
+        currentChunkIndex = 0
+        currentCharIndex  = 0
+        currentWordIndex  = 0
+      }
+
+      // Chrome bug: calling speak() immediately after cancel() causes events
+      // (onboundary, onstart, onend) to silently not fire. A short delay fixes it.
+      if (needsDelay) {
+        needsDelay = false
+        setTimeout(speakNextFromCurrent, 150)
+      } else {
+        speakNextFromCurrent()
+      }
+    }
+
+    /* ─── Playback controls ──────────────────────────────────── */
+    function readChapter() {
+      if (!currentText) { alert('⚠️ Chưa có nội dung chương nào'); return }
+
+      showSpeechLoading()
+
+      currentAbsoluteCharIndex = parseInt(document.getElementById('progressBar').value || '0')
+
+      let total = 0
+      for (let i = 0; i < currentChunks.length; i++) {
+        const len = currentChunks[i].length
+        if (currentAbsoluteCharIndex < total + len) {
+          currentChunkIndex = i
+          currentCharIndex  = currentAbsoluteCharIndex - total
+          break
+        }
+        total += len
+      }
+
+      speakLongText(currentText, true)
+    }
+
+    function pauseRead()  {
+      clearProgressTimer()
+      speechSynthesis.pause()
+    }
+
+    function stopRead() {
+      clearProgressTimer()
+      speechSynthesis.cancel()
+    }
+
+    function resumeRead() {
+      if (speechSynthesis.paused) {
+        speechSynthesis.resume()
+        return
+      }
+      // Restore position from localStorage and sync progressBar so readChapter() picks it up
+      currentChunkIndex = parseInt(localStorage.getItem('reading_chunk') || '0')
+      currentCharIndex  = parseInt(localStorage.getItem('reading_char')  || '0')
+
+      const bar = document.getElementById('progressBar')
+      let total = 0
+      for (let i = 0; i < currentChunkIndex; i++) total += currentChunks[i].length
+      bar.value = total + currentCharIndex
+      currentAbsoluteCharIndex = parseInt(bar.value)
+
+      readChapter()
+    }
+
+    function restartRead() {
+      stopRead()
+
+      currentChunkIndex        = 0
+      currentCharIndex         = 0
+      currentWordIndex         = 0
+      currentAbsoluteCharIndex = 0
+
+      const bar = document.getElementById('progressBar')
+      bar.value = 0
+      updateProgress()
+
+      localStorage.removeItem('reading_chunk')
+      localStorage.removeItem('reading_char')
+
+      readChapter()
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       PROGRESS BAR
+    ═══════════════════════════════════════════════════════════ */
+    function initProgressBar() {
+      const bar = document.getElementById('progressBar')
+      bar.min   = 0
+      bar.max   = currentText.length
+      bar.value = 0
+      bar.style.setProperty('--progress', '0%')
+      document.getElementById('progressText').innerText = `0 / ${currentText.length}`
+    }
+
+    function updateProgress() {
+      const bar = document.getElementById('progressBar')
+      bar.value = currentAbsoluteCharIndex
+
+      const percent = (currentAbsoluteCharIndex / bar.max) * 100
+      bar.style.setProperty('--progress', percent + '%')
+      document.getElementById('progressText').innerText = `${currentAbsoluteCharIndex} / ${bar.max}`
+    }
+
+    function highlightCurrentWord(index) {
+      const old = document.querySelector('.highlight-word')
+      if (old) old.classList.remove('highlight-word')
+
+      const el = document.getElementById('word-' + index)
+      if (el) {
+        el.classList.add('highlight-word')
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }
+    }
+
+    /** Resolve chunk index + char offset from an absolute char position */
+    function seekToCharIndex(absIndex) {
+      currentAbsoluteCharIndex = absIndex
+      let total = 0
+      for (let i = 0; i < currentChunks.length; i++) {
+        const len = currentChunks[i].length
+        if (absIndex < total + len) {
+          currentChunkIndex = i
+          currentCharIndex  = absIndex - total
+          return
+        }
+        total += len
+      }
+    }
+
+    /* ─── Progress bar events ────────────────────────────────── */
+    const progressBar = document.getElementById('progressBar')
+
+    progressBar.addEventListener('mousedown', () => {
+      isDraggingProgress = true
+      if (speechSynthesis.speaking || speechSynthesis.paused) {
+        speechSynthesis.cancel()
+        needsDelay = true
+      }
     })
-  }
-}
 
-let currentSpeech = null
-let currentChunkIndex = 0
-let currentCharIndex = 0
-let currentWordIndex = 0
-let currentChunks = []
-let currentText = ""
-let currentAbsoluteCharIndex = 0
-let isDraggingProgress = false
-let lastHighlight = 0
+    progressBar.addEventListener('touchstart', () => {
+      isDraggingProgress = true
+      if (speechSynthesis.speaking || speechSynthesis.paused) {
+        speechSynthesis.cancel()
+        needsDelay = true
+      }
+    })
 
-function getWordIndexFromCharIndex(charIndex, text) {
-  const beforeText = text.slice(0, charIndex)
-  return beforeText.trim().split(/\s+/).length - 1
-}
+    progressBar.addEventListener('touchend', function () {
+      isDraggingProgress = false
+      seekToCharIndex(parseInt(this.value))
+      updateProgress()
+      readChapter()  // resume reading from new position on mobile
+    })
 
-function updateProgress() {
-  const progressBar = document.getElementById("progressBar")
-  const progressText = document.getElementById("progressText")
-
-  progressBar.value = currentAbsoluteCharIndex
-
-  const percent = (currentAbsoluteCharIndex / progressBar.max) * 100
-  progressBar.style.setProperty("--progress", percent + "%")
-
-  progressText.innerText =
-    currentAbsoluteCharIndex + " / " + progressBar.max
-}
-
-const progressBar = document.getElementById("progressBar")
-
-progressBar.addEventListener("mousedown", () => {
-  isDraggingProgress = true
-  speechSynthesis.cancel()
-})
-
-progressBar.addEventListener("touchstart", () => {
-  isDraggingProgress = true
-  speechSynthesis.cancel()
-})
-
-progressBar.addEventListener("touchend", function () {
-  isDraggingProgress = false
-  const newIndex = parseInt(this.value)
-
-  currentAbsoluteCharIndex = newIndex
-
-  let total = 0
-  for (let i = 0; i < currentChunks.length; i++) {
-    const len = currentChunks[i].length
-
-    if (newIndex < total + len) {
-      currentChunkIndex = i
-      currentCharIndex = newIndex - total
-      break
-    }
-
-    total += len
-  }
-})
-
-progressBar.addEventListener("input", function () {
-  const newIndex = parseInt(this.value)
-
-  currentAbsoluteCharIndex = newIndex
-
-  currentWordIndex = getWordIndexFromCharIndex(
-    currentAbsoluteCharIndex,
-    currentText
-  )
-
-  highlightCurrentWord(currentWordIndex)
-  updateProgress()
-})
-
-progressBar.addEventListener("change", function () {
-  const newIndex = parseInt(this.value)
-
-  currentAbsoluteCharIndex = newIndex
-
-  let total = 0
-  for (let i = 0; i < currentChunks.length; i++) {
-    const len = currentChunks[i].length
-
-    if (newIndex < total + len) {
-      currentChunkIndex = i
-      currentCharIndex = newIndex - total
-      break
-    }
-
-    total += len
-  }
-
-  isDraggingProgress = false
-
-  stopRead()
-  readChapter()
-})
-
-function speakNextFromCurrent() {
-  if (currentChunkIndex >= currentChunks.length) return
-
-  const chunk = currentChunks[currentChunkIndex].slice(currentCharIndex)
-
-  const voiceIndex = localStorage.getItem("voice_index")
-  const rate = parseFloat(localStorage.getItem("voice_rate") || "1")
-  const pitch = parseFloat(localStorage.getItem("voice_pitch") || "1")
-
-  const speech = new SpeechSynthesisUtterance(chunk)
-
-  if (voices[voiceIndex]) {
-    speech.voice = voices[voiceIndex]
-    speech.lang = voices[voiceIndex].lang
-  } else {
-    speech.lang = "vi-VN"
-  }
-
-  speech.rate = rate
-  speech.pitch = pitch
-
-  speech.onboundary = (event) => {
-    
-
-    currentCharIndex = event.charIndex
-
-    currentAbsoluteCharIndex =
-        currentChunks.slice(0, currentChunkIndex).join("").length + currentCharIndex
-
-    currentWordIndex = getWordIndexFromCharIndex(
-        currentAbsoluteCharIndex,
-        currentText
-    )
-
-    const now = Date.now()
-    if(now - lastHighlight > 100){
+    progressBar.addEventListener('input', function () {
+      seekToCharIndex(parseInt(this.value))
+      currentWordIndex = getWordIndexFromCharIndex(currentAbsoluteCharIndex, currentText)
       highlightCurrentWord(currentWordIndex)
       updateProgress()
-      lastHighlight = now
+    })
+
+    progressBar.addEventListener('change', function () {
+      seekToCharIndex(parseInt(this.value))
+      isDraggingProgress = false
+      readChapter()
+    })
+
+    /* ═══════════════════════════════════════════════════════════
+       CHAPTER NAVIGATION
+    ═══════════════════════════════════════════════════════════ */
+    function renderChapterSelect() {
+      const select = document.getElementById('chapterSelect')
+      select.innerHTML = ''
+
+      chapters.forEach((ch, index) => {
+        const opt = document.createElement('option')
+        opt.value       = index
+        opt.textContent = ch.title
+        opt.selected    = index === currentIndex
+        select.appendChild(opt)
+      })
     }
 
-    localStorage.setItem("reading_chunk", currentChunkIndex)
-    localStorage.setItem("reading_char", currentCharIndex)
-  }
-
-  speech.onstart = () => {
-    hideSpeechLoading()
-  }
-
-  speech.onend = () => {
-    currentChunkIndex++
-    currentCharIndex = 0
-    currentWordIndex = 0
-
-    localStorage.setItem("reading_chunk", currentChunkIndex)
-    localStorage.setItem("reading_char", 0)
-
-    if (currentChunkIndex >= currentChunks.length) {
-      goNext()
-      setTimeout(() => {
-        restartRead()
-      }, 2000)
-      return
+    function updateNavButtons() {
+      const prevBtn = document.querySelector('.chapter-nav button:first-child')
+      const nextBtn = document.querySelector('.chapter-nav button:last-child')
+      prevBtn.disabled = currentIndex >= chapters.length - 1
+      nextBtn.disabled = currentIndex <= 0
     }
 
-    speakNextFromCurrent()
-  }
+    async function goNext() {
+      if (!chapters.length) return
+      if (currentIndex <= 0) { alert('⚠️ Hết chương mới hơn rồi'); return }
 
-  currentSpeech = speech
-  speechSynthesis.speak(speech)
-}
-
-function speakLongText(text, resume = false) {
-  if (speechSynthesis.speaking) {
-    speechSynthesis.cancel()
-  }
-
-  currentText = text
-
-  if (!resume) {
-    currentChunkIndex = 0
-    currentCharIndex = 0
-    currentWordIndex = 0
-  }
-
-  speakNextFromCurrent()
-}
-
-function showSpeechLoading(text = "🔊 Preparing voice..."){
-  const el = document.getElementById("speechLoading")
-  el.innerText = text
-  el.classList.remove("hidden")
-}
-
-function hideSpeechLoading(){
-  document.getElementById("speechLoading").classList.add("hidden")
-}
-
-function readChapter(){
-  if(!currentText){
-    alert("⚠️ No chapter loaded")
-    return
-  }
-  showSpeechLoading()
-  const text = currentText
-
-  const progressBar = document.getElementById("progressBar")
-  currentAbsoluteCharIndex = parseInt(progressBar.value || "0")
-
-  let total = 0
-  for (let i = 0; i < currentChunks.length; i++) {
-    const len = currentChunks[i].length
-    if (currentAbsoluteCharIndex < total + len) {
-    currentChunkIndex = i
-    currentCharIndex = currentAbsoluteCharIndex - total
-    break
-    }
-    total += len
-  }
-
-  speakLongText(text, true)
-}
-
-function pauseRead(){
-  speechSynthesis.pause()
-}
-
-function resumeRead() {
-  if (speechSynthesis.paused) {
-    speechSynthesis.resume()
-    return
-  }
-
-  currentChunkIndex = parseInt(localStorage.getItem("reading_chunk") || "0")
-  currentCharIndex = parseInt(localStorage.getItem("reading_char") || "0")
-
-  readChapter()
-}
-
-function stopRead(){
-  speechSynthesis.cancel()
-}
-
-function restartRead() {
-  stopRead()
-
-  currentChunkIndex = 0
-  currentCharIndex = 0
-  currentWordIndex = 0
-  const progressBar = document.getElementById("progressBar")
-  currentAbsoluteCharIndex = 0
-  progressBar.value = 0
-  updateProgress()
-
-  localStorage.removeItem("reading_chunk")
-  localStorage.removeItem("reading_char")
-
-  readChapter()
-}
-let voices = []
-
-function loadVoices(){
-  voices = speechSynthesis.getVoices()
-
-  const select = document.getElementById("voiceSelect")
-  select.innerHTML = ""
-
-  voices.forEach((voice, index) => {
-    const option = document.createElement("option")
-    option.value = index
-    option.textContent = `${voice.name} (${voice.lang})`
-    select.appendChild(option)
-  })
-
-  // load saved
-  const savedVoice = localStorage.getItem("voice_index")
-  if(savedVoice){
-    select.value = savedVoice
-  }
-}
-
-// Chrome cần event này
-speechSynthesis.onvoiceschanged = loadVoices
-
-const rateInput = document.getElementById("rateInput")
-const pitchInput = document.getElementById("pitchInput")
-
-const rateValue = document.getElementById("rateValue")
-const pitchValue = document.getElementById("pitchValue")
-
-rateInput.oninput = () => {
-  rateValue.innerText = rateInput.value
-}
-
-pitchInput.oninput = () => {
-  pitchValue.innerText = pitchInput.value
-}
-
-function renderChapterSelect(){
-  const select = document.getElementById("chapterSelect")
-
-  select.innerHTML = ""
-
-  chapters.forEach((ch, index) => {
-    const option = document.createElement("option")
-    option.value = index
-    option.textContent = ch.title
-
-    if(index === currentIndex){
-      option.selected = true
+      currentIndex--
+      document.getElementById('urlInput').value = chapters[currentIndex].url
+      updateNavButtons()
+      await fetchChapter()
+      window.scrollTo({ top: 0, behavior: 'smooth' })
     }
 
-    select.appendChild(option)
-  })
-}
+    async function goPrev() {
+      if (!chapters.length) return
+      if (currentIndex >= chapters.length - 1) { alert('⚠️ Hết chương cũ hơn rồi'); return }
 
-document.getElementById("chapterSelect").addEventListener("change", function(){
-  const index = parseInt(this.value)
+      currentIndex++
+      document.getElementById('urlInput').value = chapters[currentIndex].url
+      updateNavButtons()
+      await fetchChapter()
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
 
-  if(isNaN(index)) return
+    /* ═══════════════════════════════════════════════════════════
+       EVENT BINDINGS
+    ═══════════════════════════════════════════════════════════ */
+    document.getElementById('urlInput').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') fetchChapter()
+    })
 
-  currentIndex = index
+    document.getElementById('chapterSelect').addEventListener('change', function () {
+      const index = parseInt(this.value)
+      if (isNaN(index)) return
+      currentIndex = index
+      document.getElementById('urlInput').value = chapters[index].url
+      fetchChapter()
+    })
 
-  const ch = chapters[index]
+    document.getElementById('voiceSelect').addEventListener('change', applyVoiceSettings)
+    document.getElementById('rateInput').addEventListener('input',   applyVoiceSettings)
+    document.getElementById('pitchInput').addEventListener('input',  applyVoiceSettings)
 
-  document.getElementById("urlInput").value = ch.url
+    /* ─── Hide/show nav on scroll ───────────────────────────── */
+    let lastScroll = 0
+    const nav = document.querySelector('.chapter-nav')
 
-  fetchChapter()
-})
+    window.addEventListener('scroll', () => {
+      const current = window.scrollY
+      nav.style.display = current > lastScroll ? 'none' : 'flex'
+      lastScroll = current
+    })
 
-function goNext(){
-  if(!chapters.length) return
+    /* ═══════════════════════════════════════════════════════════
+       INIT
+    ═══════════════════════════════════════════════════════════ */
+    window.addEventListener('load', () => {
+      const lastUrl = localStorage.getItem('last_chapter_url')
+      if (lastUrl) {
+        document.getElementById('urlInput').value = lastUrl
+        fetchChapter()
+      }
+    })
+  </script>
 
-  if(currentIndex <= 0){
-    alert("⚠️ Hết chương mới hơn rồi")
-    return
-  }
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./service-worker.js')
+    }
+  </script>
 
-  currentIndex--
-
-  const ch = chapters[currentIndex]
-
-  document.getElementById("urlInput").value = ch.url
-
-  updateNavButtons()
-  fetchChapter()
-  window.scrollTo({ top: 0, behavior: "smooth" })
-}
-
-function goPrev(){
-  if(!chapters.length) return
-
-  if(currentIndex >= chapters.length - 1){
-    alert("⚠️ Hết chương cũ hơn rồi")
-    return
-  }
-
-  currentIndex++
-
-  const ch = chapters[currentIndex]
-
-  document.getElementById("urlInput").value = ch.url
-
-  updateNavButtons()
-  fetchChapter()
-  window.scrollTo({ top: 0, behavior: "smooth" })
-}
-
-function updateNavButtons(){
-  const prevBtn = document.querySelector(".chapter-nav button:first-child")
-  const nextBtn = document.querySelector(".chapter-nav button:last-child")
-
-  prevBtn.disabled = currentIndex >= chapters.length - 1
-  nextBtn.disabled = currentIndex <= 0
-}
-
-window.addEventListener("load", () => {
-  const lastUrl = localStorage.getItem("last_chapter_url")
-
-  if(lastUrl){
-    document.getElementById("urlInput").value = lastUrl
-    fetchChapter()
-  }
-})
-let lastScroll = 0
-const nav = document.querySelector(".chapter-nav")
-
-window.addEventListener("scroll", () => {
-  const current = window.scrollY
-
-  if(current > lastScroll){
-    nav.style.display = "none" // ẩn
-  } else {
-    nav.style.display = "flex" // hiện
-  }
-
-  lastScroll = current
-})
-function applyVoiceSettings() {
-  const voiceIndex = document.getElementById("voiceSelect").value
-  const rate = document.getElementById("rateInput").value
-  const pitch = document.getElementById("pitchInput").value
-
-  localStorage.setItem("voice_index", voiceIndex)
-  localStorage.setItem("voice_rate", rate)
-  localStorage.setItem("voice_pitch", pitch)
-
-  rateValue.innerText = rate
-  pitchValue.innerText = pitch
-
-  // nếu đang đọc thì đọc lại với setting mới
-  if (speechSynthesis.speaking) {
-    speechSynthesis.cancel()
-    speakNextFromCurrent()
-  }
-}
-document.getElementById("voiceSelect").addEventListener("change", applyVoiceSettings)
-rateInput.addEventListener("input", applyVoiceSettings)
-pitchInput.addEventListener("input", applyVoiceSettings)
-</script>
-<script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/craw_novel/service-worker.js');
-  }
-</script>
 </body>
 </html>
