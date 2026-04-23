@@ -340,13 +340,41 @@
                   inset 0 1px 0 rgba(255, 255, 255, 0.6);
     }
 
+    .progress-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
     #progressText {
-      display: block;
       font-size: 13px;
       font-weight: 600;
       color: #374151;
-      margin-bottom: 8px;
     }
+
+    .progress-controls {
+      display: flex;
+      gap: 6px;
+    }
+
+    .ctrl-btn {
+      padding: 4px 10px;
+      font-size: 14px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      background: #e5e7eb;
+      color: #374151;
+      transition: all 0.2s ease;
+      line-height: 1;
+    }
+
+    .ctrl-btn:hover  { background: #d1d5db; transform: scale(1.1); }
+    .ctrl-btn:active { transform: scale(0.95); }
+
+    .ctrl-stop       { background: #fee2e2; color: #dc2626; }
+    .ctrl-stop:hover { background: #fecaca; }
 
     #progressBar {
       width: 100%;
@@ -490,7 +518,13 @@
 
   <!-- ── Progress Bar (fixed, above nav) ───────────────────── -->
   <div id="progressContainer">
-    <span id="progressText">0 / 0</span>
+    <div class="progress-header">
+      <span id="progressText">0 / 0</span>
+      <div class="progress-controls">
+        <button id="btnPauseResume" class="ctrl-btn" onclick="togglePauseResume()" title="Tạm dừng / Tiếp tục">⏸</button>
+        <button class="ctrl-btn ctrl-stop"           onclick="stopRead()"          title="Dừng hẳn">⏹</button>
+      </div>
+    </div>
     <input id="progressBar" type="range" min="0" value="0" />
   </div>
 
@@ -761,9 +795,9 @@
         hideSpeechLoading()
 
         // Fallback: nếu onboundary không fire (Linux/Android/một số voice),
-        // dùng timer ước tính vị trí theo tốc độ đọc (~6 ký tự/giây ở rate=1)
+        // dùng timer ước tính vị trí: ~6 từ/giây × ~4 ký tự/từ = 24 ký tự/giây ở rate=1
         const startTime  = Date.now()
-        const charsPerMs = (6 * rate) / 1000
+        const charsPerMs = (24 * rate) / 1000
 
         clearProgressTimer()
         boundaryFired = false
@@ -863,14 +897,56 @@
       speakLongText(currentText, true)
     }
 
-    function pauseRead()  {
+    function updatePauseBtn(state) {
+      const btn = document.getElementById('btnPauseResume')
+      if (!btn) return
+      if (state === 'paused') {
+        btn.textContent = '▶'
+        btn.title = 'Tiếp tục'
+      } else {
+        btn.textContent = '⏸'
+        btn.title = 'Tạm dừng'
+      }
+    }
+
+    function pauseRead() {
       clearProgressTimer()
       speechSynthesis.pause()
+      updatePauseBtn('paused')
     }
 
     function stopRead() {
       clearProgressTimer()
       speechSynthesis.cancel()
+      updatePauseBtn('stopped')
+    }
+
+    function togglePauseResume() {
+      if (speechSynthesis.paused) {
+        speechSynthesis.resume()
+        updatePauseBtn('playing')
+        // restart timer if onboundary not supported
+        if (!boundaryFired) {
+          const resumeFrom = currentAbsoluteCharIndex
+          const rate = parseFloat(localStorage.getItem('voice_rate') || '1')
+          const charsPerMs = (24 * rate) / 1000
+          const startTime = Date.now()
+          clearProgressTimer()
+          progressTimer = setInterval(() => {
+            if (!speechSynthesis.speaking || speechSynthesis.paused) { clearProgressTimer(); return }
+            const estimated = resumeFrom + Math.round((Date.now() - startTime) * charsPerMs)
+            const clamped   = Math.min(estimated, currentText.length - 1)
+            currentAbsoluteCharIndex = clamped
+            currentWordIndex = getWordIndexFromCharIndex(clamped, currentText)
+            highlightCurrentWord(currentWordIndex)
+            updateProgress()
+          }, 250)
+        }
+      } else if (speechSynthesis.speaking) {
+        pauseRead()
+      } else {
+        readChapter()
+      }
     }
 
     function resumeRead() {
