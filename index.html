@@ -791,13 +791,17 @@
         localStorage.setItem('reading_char',  currentCharIndex)
       }
 
+      // Dùng để đo thời gian thực tế của chunk này
+      let measureStartTime = 0
+
       speech.onstart = () => {
         hideSpeechLoading()
+        measureStartTime = Date.now()
 
-        // Fallback: nếu onboundary không fire (Linux/Android/một số voice),
-        // dùng timer ước tính vị trí: ~6 từ/giây × ~4 ký tự/từ = 24 ký tự/giây ở rate=1
-        const startTime  = Date.now()
-        const charsPerMs = (24 * rate) / 1000
+        // Fallback timer: dùng tốc độ đã calibrate từ localStorage (mặc định 24 ký tự/giây)
+        const savedCps    = parseFloat(localStorage.getItem('voice_chars_per_sec') || '24')
+        const charsPerMs  = (savedCps * rate) / 1000
+        const startTime   = Date.now()
 
         clearProgressTimer()
         boundaryFired = false
@@ -826,6 +830,19 @@
 
       speech.onend = () => {
         clearProgressTimer()
+
+        // ── Calibrate: đo tốc độ đọc thực tế và lưu lại ────────
+        if (measureStartTime > 0) {
+          const elapsed = Date.now() - measureStartTime
+          // Chỉ lấy mẫu nếu chunk đủ lớn và thời gian hợp lý (tránh nhiễu)
+          if (chunk.length >= 200 && elapsed >= 1000) {
+            const measuredCps = (chunk.length / elapsed) * 1000
+            const existing    = parseFloat(localStorage.getItem('voice_chars_per_sec') || '24')
+            // Smooth: 30% cũ + 70% mới → nhanh thích nghi nhưng không giật cục
+            const smoothed    = (existing * 0.3 + measuredCps * 0.7).toFixed(2)
+            localStorage.setItem('voice_chars_per_sec', smoothed)
+          }
+        }
 
         currentChunkIndex++
         currentCharIndex = 0
@@ -927,9 +944,10 @@
         updatePauseBtn('playing')
         // restart timer if onboundary not supported
         if (!boundaryFired) {
-          const resumeFrom = currentAbsoluteCharIndex
-          const rate = parseFloat(localStorage.getItem('voice_rate') || '1')
-          const charsPerMs = (24 * rate) / 1000
+          const resumeFrom  = currentAbsoluteCharIndex
+          const rate        = parseFloat(localStorage.getItem('voice_rate')        || '1')
+          const savedCps    = parseFloat(localStorage.getItem('voice_chars_per_sec') || '24')
+          const charsPerMs  = (savedCps * rate) / 1000
           const startTime = Date.now()
           clearProgressTimer()
           progressTimer = setInterval(() => {
