@@ -353,50 +353,122 @@ button.danger:hover {
 
 #progressContainer {
   position: fixed;
-  bottom: 30px;
-  left: 10%;
-  width: 80%;
+  bottom: 85px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(700px, 90%);
   z-index: 1000;
-  background: white;
-  padding: 8px 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,.08);
+
+  background: rgba(255,255,255,0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+
+  border: 1px solid rgba(255,255,255,0.4);
+  border-radius: 16px;
+  padding: 12px 16px;
+
+  box-shadow:
+    0 8px 30px rgba(0,0,0,0.12),
+    inset 0 1px 0 rgba(255,255,255,0.6);
+}
+
+#progressText {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 8px;
 }
 
 #progressBar {
-  position: static;
   width: 100%;
   appearance: none;
   -webkit-appearance: none;
-  height: 8px;
+  height: 10px;
   border-radius: 999px;
   outline: none;
+  cursor: pointer;
   --progress: 0%;
 
   background: linear-gradient(
     to right,
-    #4f46e5 0%,
-    #4f46e5 var(--progress),
+    #6366f1 0%,
+    #8b5cf6 var(--progress),
     #e5e7eb var(--progress),
     #e5e7eb 100%
   );
+
+  transition: background 0.15s ease;
 }
 
 #progressBar::-webkit-slider-thumb {
   appearance: none;
-  width: 18px;
-  height: 18px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
-  background: #4f46e5;
+  background: white;
+  border: 4px solid #6366f1;
   cursor: pointer;
-  box-shadow: 0 0 0 4px rgba(79,70,229,0.2);
+
+  box-shadow:
+    0 4px 10px rgba(99,102,241,0.35),
+    0 0 0 6px rgba(99,102,241,0.12);
+
+  transition: transform 0.15s ease;
+}
+
+#progressBar::-webkit-slider-thumb:hover {
+  transform: scale(1.12);
 }
 
 #progressBar::-moz-range-thumb {
-  width: 18px;
-  height: 18px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
-  background: #4f46e5;
+  background: white;
+  border: 4px solid #6366f1;
   cursor: pointer;
+}
+
+.speech-loading {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  z-index: 9999;
+
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  padding: 14px 20px;
+  min-width: 240px;
+
+  color: white;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+
+  border-radius: 16px;
+
+  background: linear-gradient(
+    135deg,
+    rgba(79,70,229,0.96),
+    rgba(124,58,237,0.96)
+  );
+
+  box-shadow:
+    0 10px 30px rgba(79,70,229,0.45),
+    0 0 20px rgba(124,58,237,0.35),
+    inset 0 1px 0 rgba(255,255,255,0.25);
+
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+
+  animation: slideGlowIn 0.35s ease, pulseGlow 1.2s infinite;
+}
+
+.hidden {
+  display: none !important;
 }
 
 @media (max-width: 600px) {
@@ -493,6 +565,9 @@ button.danger:hover {
       <div id="progressContainer">
         <span id="progressText">0 / 0</span>
         <input id="progressBar" type="range" min="0" value="0">
+      </div>
+      <div id="speechLoading" class="speech-loading hidden">
+        🔊 Preparing voice...
       </div>
     </div>
 
@@ -609,6 +684,7 @@ function renderContentWithSpans(text) {
 
 // fetch chapter
 async function fetchChapter(){
+  stopRead()
   const url = document.getElementById("urlInput").value.trim()
 
   if(!url){
@@ -641,6 +717,10 @@ async function fetchChapter(){
     renderContentWithSpans(data.content || "No content found")
 
     currentText = data.content || "No content found"
+    currentChunks = []
+    for (let i = 0; i < currentText.length; i += 1800) {
+      currentChunks.push(currentText.slice(i, i + 1800))
+    }
     initProgressBar()
 
     chapters = data.chapters || []
@@ -688,6 +768,7 @@ let currentChunks = []
 let currentText = ""
 let currentAbsoluteCharIndex = 0
 let isDraggingProgress = false
+let lastHighlight = 0
 
 function getWordIndexFromCharIndex(charIndex, text) {
   const beforeText = text.slice(0, charIndex)
@@ -720,6 +801,7 @@ progressBar.addEventListener("touchstart", () => {
 })
 
 progressBar.addEventListener("touchend", function () {
+  isDraggingProgress = false
   const newIndex = parseInt(this.value)
 
   currentAbsoluteCharIndex = newIndex
@@ -736,8 +818,6 @@ progressBar.addEventListener("touchend", function () {
 
     total += len
   }
-
-  speakNextFromCurrent()
 })
 
 progressBar.addEventListener("input", function () {
@@ -774,7 +854,8 @@ progressBar.addEventListener("change", function () {
 
   isDraggingProgress = false
 
-  speakNextFromCurrent()
+  stopRead()
+  readChapter()
 })
 
 function speakNextFromCurrent() {
@@ -799,6 +880,7 @@ function speakNextFromCurrent() {
   speech.pitch = pitch
 
   speech.onboundary = (event) => {
+    
 
     currentCharIndex = event.charIndex
 
@@ -810,11 +892,19 @@ function speakNextFromCurrent() {
         currentText
     )
 
-    highlightCurrentWord(currentWordIndex)
-    updateProgress()
+    const now = Date.now()
+    if(now - lastHighlight > 100){
+      highlightCurrentWord(currentWordIndex)
+      updateProgress()
+      lastHighlight = now
+    }
 
     localStorage.setItem("reading_chunk", currentChunkIndex)
     localStorage.setItem("reading_char", currentCharIndex)
+  }
+
+  speech.onstart = () => {
+    hideSpeechLoading()
   }
 
   speech.onend = () => {
@@ -829,7 +919,7 @@ function speakNextFromCurrent() {
       goNext()
       setTimeout(() => {
         restartRead()
-      }, 500)
+      }, 2000)
       return
     }
 
@@ -848,10 +938,6 @@ function speakLongText(text, resume = false) {
   currentText = text
 
   if (!resume) {
-    currentChunks = []
-    for (let i = 0; i < text.length; i += 1800) {
-      currentChunks.push(text.slice(i, i + 1800))
-    }
     currentChunkIndex = 0
     currentCharIndex = 0
     currentWordIndex = 0
@@ -860,23 +946,24 @@ function speakLongText(text, resume = false) {
   speakNextFromCurrent()
 }
 
-function readChapter(){
-  const content = document.getElementById("content").innerText
+function showSpeechLoading(text = "🔊 Preparing voice..."){
+  const el = document.getElementById("speechLoading")
+  el.innerText = text
+  el.classList.remove("hidden")
+}
 
-  if(!content){
+function hideSpeechLoading(){
+  document.getElementById("speechLoading").classList.add("hidden")
+}
+
+function readChapter(){
+  if(!currentText){
     alert("⚠️ No chapter loaded")
     return
   }
+  showSpeechLoading()
+  const text = currentText
 
-  const text = content
-
-  // chunk text trước
-  currentChunks = []
-  for (let i = 0; i < text.length; i += 1800) {
-    currentChunks.push(text.slice(i, i + 1800))
-  }
-
-  // lấy vị trí từ bar
   const progressBar = document.getElementById("progressBar")
   currentAbsoluteCharIndex = parseInt(progressBar.value || "0")
 
@@ -884,9 +971,9 @@ function readChapter(){
   for (let i = 0; i < currentChunks.length; i++) {
     const len = currentChunks[i].length
     if (currentAbsoluteCharIndex < total + len) {
-      currentChunkIndex = i
-      currentCharIndex = currentAbsoluteCharIndex - total
-      break
+    currentChunkIndex = i
+    currentCharIndex = currentAbsoluteCharIndex - total
+    break
     }
     total += len
   }
@@ -907,7 +994,7 @@ function resumeRead() {
   currentChunkIndex = parseInt(localStorage.getItem("reading_chunk") || "0")
   currentCharIndex = parseInt(localStorage.getItem("reading_char") || "0")
 
-  speakNextFromCurrent()
+  readChapter()
 }
 
 function stopRead(){
@@ -920,6 +1007,10 @@ function restartRead() {
   currentChunkIndex = 0
   currentCharIndex = 0
   currentWordIndex = 0
+  const progressBar = document.getElementById("progressBar")
+  currentAbsoluteCharIndex = 0
+  progressBar.value = 0
+  updateProgress()
 
   localStorage.removeItem("reading_chunk")
   localStorage.removeItem("reading_char")
