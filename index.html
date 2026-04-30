@@ -492,7 +492,10 @@
     <div class="content">
       <div class="input-section">
         <input id="urlInput" placeholder="Dán link chương truyện vào đây..." />
+<textarea id="textInput" placeholder="Hoặc dán nội dung vào đây..."
+  style="width:100%; min-height:120px; margin-top:10px;"></textarea>
         <div class="button-group">
+<button class="primary" onclick="useInputText()">📄 Dùng nội dung này</button>
           <button class="primary"    onclick="fetchChapter()">🔄 Tải chương</button>
           <button class="secondary"  onclick="openBackendPopup()">⚙️ Cài đặt</button>
           <button class="secondary"  onclick="readChapter()">🔊 Đọc</button>
@@ -607,6 +610,31 @@
         progressTimer = null
       }
     }
+
+function useInputText() {
+  const text = document.getElementById('textInput').value.trim()
+  if (!text) {
+    alert('⚠️ Chưa có nội dung')
+    return
+  }
+
+  stopRead()
+
+  // 👇 EXACT SAME FLOW như fetchChapter
+  document.getElementById('title').innerText = '📄 Văn bản nhập'
+
+  renderContentWithSpans(text)
+
+  currentText   = text
+  currentChunks = buildChunks(currentText)
+  initProgressBar()
+
+  // reset chapter nav (vì không phải truyện)
+  chapters = []
+  currentIndex = -1
+  renderChapterSelect()
+  updateNavButtons()
+}
 
     /* ═══════════════════════════════════════════════════════════
        SETTINGS POPUP
