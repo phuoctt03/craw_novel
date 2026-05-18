@@ -1,0 +1,15 @@
+{
+  "name": "Craw Novel Feature",
+  "short_name": "Novel Feature",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#1DB954",
+  "icons": [
+    {
+      "src": "novel.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
