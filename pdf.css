@@ -1,0 +1,177 @@
+/* ════════════════════════════════════════════════════════════
+   pdf.css  –  styles dành riêng cho PDF Extractor module
+   Depends on: design tokens defined in index.html :root {}
+════════════════════════════════════════════════════════════ */
+
+/* ── Dropzone ──────────────────────────────────────────────── */
+.pdf-dropzone {
+  border: 2px dashed rgba(108,99,255,0.35);
+  border-radius: 12px;
+  padding: 48px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  background: rgba(108,99,255,0.03);
+  position: relative;
+}
+.pdf-dropzone:hover,
+.pdf-dropzone.dragover {
+  border-color: var(--accent);
+  background: rgba(108,99,255,0.09);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(108,99,255,0.18);
+}
+.pdf-dropzone-icon {
+  font-size: 50px;
+  display: block;
+  margin-bottom: 12px;
+  line-height: 1;
+}
+.pdf-dropzone h2 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+.pdf-dropzone p {
+  font-size: 13px;
+  color: var(--muted);
+}
+.pdf-dropzone p span { color: var(--accent-2); font-weight: 500; }
+#pdfFileInput { display: none; }
+
+/* ── File chip ────────────────────────────────────────────── */
+.pdf-file-chip {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  background: rgba(108,99,255,0.10);
+  border: 1px solid rgba(108,99,255,0.28);
+  border-radius: 100px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  margin-top: 14px;
+  color: var(--accent-2);
+  animation: fadeUp 0.28s ease;
+}
+.pdf-file-chip.visible { display: flex; }
+.pdf-file-icon { font-size: 18px; }
+.pdf-remove-btn {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 15px;
+  padding: 0 2px;
+  line-height: 1;
+  transition: color 0.2s;
+  font-family: var(--font);
+}
+.pdf-remove-btn:hover { color: var(--danger); }
+
+/* ── Action bar ───────────────────────────────────────────── */
+.pdf-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+/* ── Progress ─────────────────────────────────────────────── */
+.pdf-progress-wrap {
+  display: none;
+  margin-bottom: 10px;
+}
+.pdf-progress-wrap.visible { display: block; }
+.pdf-progress-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.pdf-progress-track {
+  height: 6px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 100px;
+  overflow: hidden;
+}
+.pdf-progress-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  border-radius: 100px;
+  transition: width 0.22s ease;
+  box-shadow: 0 0 10px rgba(108,99,255,0.55);
+}
+
+/* ── Status text ──────────────────────────────────────────── */
+.pdf-status {
+  font-size: 13px;
+  color: var(--muted);
+  min-height: 18px;
+  transition: color 0.25s;
+}
+.pdf-status.ok  { color: var(--success); }
+.pdf-status.err { color: var(--danger); }
+
+/* ── Stats ────────────────────────────────────────────────── */
+.pdf-stats {
+  display: none;
+  gap: 12px;
+}
+.pdf-stats.visible { display: flex; }
+.pdf-stat-chip {
+  flex: 1;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 16px;
+  text-align: center;
+}
+.pdf-stat-value {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--accent-2);
+}
+.pdf-stat-label {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ── Output textarea ──────────────────────────────────────── */
+.pdf-output {
+  height: 340px;
+  resize: vertical;
+  font-family: 'Inter', monospace;
+  font-size: 13.5px;
+  line-height: 1.7;
+}
+
+/* ── Responsive ───────────────────────────────────────────── */
+@media (max-width: 540px) {
+  .pdf-actions { flex-direction: column; }
+  .pdf-actions .btn { width: 100%; justify-content: center; }
+  .pdf-stats { flex-direction: column; }
+}
+
+/* ── Light mode overrides (pdf) ───────────────────────────── */
+html.light .pdf-dropzone {
+  background: rgba(108,99,255,0.04);
+  border-color: rgba(91,82,232,0.3);
+}
+html.light .pdf-dropzone:hover,
+html.light .pdf-dropzone.dragover {
+  background: rgba(91,82,232,0.08);
+}
+html.light .pdf-progress-track {
+  background: rgba(0,0,0,0.08);
+}
+html.light .pdf-stat-chip {
+  background: rgba(0,0,0,0.03);
+}
