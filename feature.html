@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Bộ công cụ đọc truyện và trích xuất PDF." />
+  <title>PDF & Novel Reader</title>
+  <link rel="manifest" href="manifest.json" />
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- Module CSS files -->
+  <link rel="stylesheet" href="pdf.css" />
+  <link rel="stylesheet" href="novel.css" />
+
+  <style>
+    /* ════════════════════════════════════════════════
+       DESIGN TOKENS – shared across all modules
+    ════════════════════════════════════════════════ */
+    /* ── DARK (default) ── */
+    :root {
+      --bg:          #0d0f1a;
+      --surface:     rgba(255,255,255,0.05);
+      --surface-2:   rgba(255,255,255,0.08);
+      --border:      rgba(255,255,255,0.10);
+      --border-2:    rgba(255,255,255,0.16);
+      --accent:      #6c63ff;
+      --accent-2:    #a78bfa;
+      --accent-3:    #667eea;
+      --text:        #e2e8f0;
+      --muted:       #94a3b8;
+      --success:     #34d399;
+      --danger:      #f87171;
+      --warning:     #fbbf24;
+      --radius:      14px;
+      --radius-sm:   8px;
+      --shadow:      0 24px 64px rgba(0,0,0,0.5);
+      --font:        'Inter', sans-serif;
+      --input-bg:    rgba(0,0,0,0.25);
+      --nav-bg:      rgba(13,15,26,0.88);
+      --toast-bg:    #1a1d2e;
+      --popup-bg:    #131525;
+      --body-glow-1: rgba(108,99,255,0.22);
+      --body-glow-2: rgba(167,139,250,0.12);
+    }
+
+    /* ── LIGHT ── */
+    html.light {
+      --bg:          #f1f3fb;
+      --surface:     rgba(255,255,255,0.82);
+      --surface-2:   rgba(255,255,255,0.95);
+      --border:      rgba(0,0,0,0.10);
+      --border-2:    rgba(0,0,0,0.16);
+      --accent:      #5b52e8;
+      --accent-2:    #7c3aed;
+      --accent-3:    #4f46e5;
+      --text:        #1e293b;
+      --muted:       #64748b;
+      --success:     #059669;
+      --danger:      #dc2626;
+      --warning:     #d97706;
+      --shadow:      0 12px 40px rgba(0,0,0,0.12);
+      --input-bg:    rgba(255,255,255,0.9);
+      --nav-bg:      rgba(255,255,255,0.94);
+      --toast-bg:    #ffffff;
+      --popup-bg:    #ffffff;
+      --body-glow-1: rgba(108,99,255,0.10);
+      --body-glow-2: rgba(167,139,250,0.06);
+    }
+
+    /* ════════════════════════════════════════════════
+       GLOBAL RESET & BASE
+    ════════════════════════════════════════════════ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 0 0 220px;
+      background-image:
+        radial-gradient(ellipse 80% 50% at 50% -10%, var(--body-glow-1) 0%, transparent 70%),
+        radial-gradient(ellipse 50% 40% at 80% 110%, var(--body-glow-2) 0%, transparent 60%);
+      transition: background-color 0.3s, color 0.3s;
+    }
+
+    /* ════════════════════════════════════════════════
+       APP HEADER
+    ════════════════════════════════════════════════ */
+    .app-header {
+      text-align: center;
+      padding: 36px 20px 0;
+      max-width: 860px;
+      margin: 0 auto;
+    }
+    .app-header .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(108,99,255,0.16);
+      border: 1px solid rgba(108,99,255,0.35);
+      color: var(--accent-2);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 12px;
+      border-radius: 100px;
+      margin-bottom: 14px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .app-header h1 {
+      font-size: clamp(22px, 5vw, 34px);
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--text) 30%, var(--accent-2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1.2;
+    }
+    .app-header p {
+      color: var(--muted);
+      margin-top: 8px;
+      font-size: 13.5px;
+    }
+
+    /* ── Theme toggle button ── */
+    .theme-toggle {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      z-index: 8000;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--surface-2);
+      border: 1px solid var(--border-2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 18px;
+      transition: all 0.25s ease;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+    }
+    .theme-toggle:hover {
+      transform: scale(1.1) rotate(15deg);
+      box-shadow: 0 4px 18px rgba(108,99,255,0.35);
+    }
+
+    /* ════════════════════════════════════════════════
+       TAB NAVIGATION
+    ════════════════════════════════════════════════ */
+    .tab-nav {
+      display: flex;
+      gap: 6px;
+      max-width: 860px;
+      margin: 24px auto 0;
+      padding: 0 20px;
+    }
+    .tab-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--surface);
+      color: var(--muted);
+      font-family: var(--font);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.22s ease;
+      user-select: none;
+    }
+    .tab-btn:hover {
+      border-color: var(--border-2);
+      color: var(--text);
+      background: var(--surface-2);
+    }
+    .tab-btn.active {
+      background: linear-gradient(135deg, var(--accent), #8b5cf6);
+      border-color: transparent;
+      color: #fff;
+      box-shadow: 0 4px 18px rgba(108,99,255,0.4);
+    }
+    .tab-btn .tab-icon { font-size: 16px; }
+
+    /* ════════════════════════════════════════════════
+       TAB PANELS
+    ════════════════════════════════════════════════ */
+    .tab-panel {
+      display: none;
+      max-width: 860px;
+      margin: 20px auto 0;
+      padding: 0 20px;
+      animation: fadeUp 0.3s ease both;
+    }
+    .tab-panel.active { display: flex; flex-direction: column; gap: 18px; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ════════════════════════════════════════════════
+       SHARED CARD
+    ════════════════════════════════════════════════ */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 22px;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      box-shadow: var(--shadow);
+    }
+
+    /* ════════════════════════════════════════════════
+       SHARED BUTTON BASE
+    ════════════════════════════════════════════════ */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 9px 17px;
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 13.5px;
+      font-family: var(--font);
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), #8b5cf6);
+      color: #fff;
+      box-shadow: 0 4px 16px rgba(108,99,255,0.38);
+    }
+    .btn-primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 22px rgba(108,99,255,0.52); }
+
+    .btn-secondary {
+      background: rgba(255,255,255,0.07);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-secondary:hover:not(:disabled) { background: rgba(255,255,255,0.12); transform: translateY(-1px); }
+
+    .btn-success {
+      background: rgba(52,211,153,0.12);
+      color: var(--success);
+      border: 1px solid rgba(52,211,153,0.28);
+    }
+    .btn-success:hover:not(:disabled) { background: rgba(52,211,153,0.2); transform: translateY(-1px); }
+
+    .btn-warning {
+      background: rgba(251,191,36,0.12);
+      color: var(--warning);
+      border: 1px solid rgba(251,191,36,0.28);
+    }
+    .btn-warning:hover:not(:disabled) { background: rgba(251,191,36,0.2); transform: translateY(-1px); }
+
+    .btn-danger-soft {
+      background: rgba(248,113,113,0.10);
+      color: var(--danger);
+      border: 1px solid rgba(248,113,113,0.26);
+    }
+    .btn-danger-soft:hover:not(:disabled) { background: rgba(248,113,113,0.18); transform: translateY(-1px); }
+
+    /* ════════════════════════════════════════════════
+       SHARED INPUTS
+    ════════════════════════════════════════════════ */
+    .input-field {
+      width: 100%;
+      background: var(--input-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 11px 14px;
+      font-size: 14px;
+      color: var(--text);
+      font-family: var(--font);
+      transition: border-color 0.2s, background 0.3s;
+      outline: none;
+    }
+    .input-field::placeholder { color: var(--muted); opacity: 0.5; }
+    .input-field:focus { border-color: rgba(108,99,255,0.5); box-shadow: 0 0 0 3px rgba(108,99,255,0.1); }
+
+    /* ════════════════════════════════════════════════
+       TOAST (shared)
+    ════════════════════════════════════════════════ */
+    #toast {
+      position: fixed;
+      bottom: 90px;
+      right: 20px;
+      background: var(--toast-bg);
+      color: var(--text);
+      border: 1px solid var(--border-2);
+      border-radius: 11px;
+      padding: 11px 18px;
+      font-size: 14px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+      transform: translateY(20px);
+      opacity: 0;
+      transition: all 0.32s cubic-bezier(0.34,1.56,0.64,1);
+      z-index: 9000;
+      max-width: 300px;
+    }
+    #toast.show { transform: translateY(0); opacity: 1; }
+
+    /* ════════════════════════════════════════════════
+       SECTION LABELS
+    ════════════════════════════════════════════════ */
+    .section-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    /* ════════════════════════════════════════════════
+       RESPONSIVE
+    ════════════════════════════════════════════════ */
+    @media (max-width: 540px) {
+      body { padding-bottom: 220px; }
+      .tab-panel { padding: 0 12px; }
+      .app-header { padding: 24px 12px 0; }
+      .tab-nav { padding: 0 12px; flex-wrap: wrap; }
+      .tab-btn { flex: 1; justify-content: center; font-size: 12.5px; padding: 9px 10px; }
+      .theme-toggle { top: 10px; right: 10px; width: 36px; height: 36px; font-size: 16px; }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ══ Theme Toggle ═══════════════════════════════════════ -->
+  <button class="theme-toggle" id="themeToggle" title="Chuyển theme" aria-label="Bật/tắt chế độ sáng/tối">🌙</button>
+
+  <!-- ══ App Header ══════════════════════════════════════════ -->
+  <header class="app-header">
+    <h1>PDF Extractor · Novel Reader · Text-to-Speech</h1>
+  </header>
+
+  <!-- ══ Tab Nav ═════════════════════════════════════════════ -->
+  <nav class="tab-nav" role="tablist" aria-label="Chọn công cụ">
+    <button id="tab-btn-pdf"   class="tab-btn active" role="tab" aria-selected="true"
+            onclick="switchTab('pdf')"   aria-controls="tab-pdf">
+      <span class="tab-icon">📄</span> PDF Extractor
+    </button>
+    <button id="tab-btn-novel" class="tab-btn" role="tab" aria-selected="false"
+            onclick="switchTab('novel')" aria-controls="tab-novel">
+      <span class="tab-icon">📖</span> Novel Reader
+    </button>
+    <!-- Thêm module mới: copy tab-btn này và tạo tab-xxx.css + tab-xxx.js -->
+  </nav>
+
+  <!-- ══ PDF Module Panel ════════════════════════════════════ -->
+  <main id="tab-pdf" class="tab-panel active" role="tabpanel" aria-labelledby="tab-btn-pdf">
+
+    <!-- Upload card -->
+    <div class="card">
+      <p class="section-label">Chọn file PDF</p>
+      <div class="pdf-dropzone" id="pdfDropzone" role="button" tabindex="0"
+           aria-label="Kéo thả hoặc click để chọn file PDF">
+        <span class="pdf-dropzone-icon">📂</span>
+        <h2>Kéo &amp; thả file PDF vào đây</h2>
+        <p>hoặc <span>click để chọn file</span> từ máy tính</p>
+        <input type="file" id="pdfFileInput" accept="application/pdf" />
+      </div>
+      <div class="pdf-file-chip" id="pdfFileChip">
+        <span class="pdf-file-icon">📄</span>
+        <span id="pdfFileName">–</span>
+        <button class="pdf-remove-btn" id="pdfRemoveBtn" aria-label="Xoá file">✕</button>
+      </div>
+    </div>
+
+    <!-- Actions card -->
+    <div class="card">
+      <div class="pdf-actions">
+        <button class="btn btn-primary" id="pdfBtnExtract" disabled>⚡ Trích xuất</button>
+        <button class="btn btn-secondary" id="pdfBtnCopy" disabled>📋 Sao chép</button>
+        <button class="btn btn-success" id="pdfBtnDownload" disabled>⬇ Tải .txt</button>
+        <button class="btn btn-warning" id="pdfBtnSendReader" disabled title="Gửi văn bản sang Novel Reader để đọc TTS">📖 Gửi sang Reader</button>
+        <button class="btn btn-danger-soft" id="pdfBtnClear" style="margin-left:auto">🗑 Xoá</button>
+      </div>
+
+      <div class="pdf-progress-wrap" id="pdfProgressWrap">
+        <div class="pdf-progress-header">
+          <span id="pdfProgressLabel">Đang xử lý…</span>
+          <span id="pdfProgressPct">0%</span>
+        </div>
+        <div class="pdf-progress-track"><div class="pdf-progress-bar" id="pdfProgressBar"></div></div>
+      </div>
+
+      <p class="pdf-status" id="pdfStatus">Chưa chọn file</p>
+    </div>
+
+    <!-- Stats -->
+    <div class="pdf-stats" id="pdfStats">
+      <div class="pdf-stat-chip"><div class="pdf-stat-value" id="pdfStatPages">–</div><div class="pdf-stat-label">Trang</div></div>
+      <div class="pdf-stat-chip"><div class="pdf-stat-value" id="pdfStatWords">–</div><div class="pdf-stat-label">Từ</div></div>
+      <div class="pdf-stat-chip"><div class="pdf-stat-value" id="pdfStatChars">–</div><div class="pdf-stat-label">Ký tự</div></div>
+    </div>
+
+    <!-- Output card -->
+    <div class="card">
+      <p class="section-label">Kết quả trích xuất</p>
+      <textarea class="input-field pdf-output" id="pdfOutput"
+                placeholder="Văn bản trích xuất sẽ hiển thị ở đây…"
+                spellcheck="false" readonly></textarea>
+    </div>
+  </main>
+
+  <!-- ══ Novel Module Panel ══════════════════════════════════ -->
+  <main id="tab-novel" class="tab-panel" role="tabpanel" aria-labelledby="tab-btn-novel">
+
+    <!-- Input card -->
+    <div class="card">
+      <p class="section-label">Nguồn nội dung</p>
+      <div class="novel-input-row">
+        <input class="input-field" id="novelUrlInput" placeholder="Dán link chương truyện vào đây…" />
+        <button class="btn btn-primary" onclick="novelFetchChapter()">🔄 Tải chương</button>
+        <button class="btn btn-secondary" id="novelBtnSettings" onclick="novelOpenSettings()">⚙️ Cài đặt</button>
+      </div>
+      <div class="novel-paste-row">
+        <textarea class="input-field novel-paste-area" id="novelTextInput"
+                  placeholder="Hoặc dán nội dung thủ công vào đây…"></textarea>
+        <button class="btn btn-secondary" onclick="novelUseInputText()">📄 Dùng nội dung này</button>
+      </div>
+    </div>
+
+    <!-- TTS controls card -->
+    <div class="card">
+      <p class="section-label">Điều khiển đọc</p>
+      <div class="novel-tts-controls">
+        <button class="btn btn-primary"   onclick="novelReadChapter()">🔊 Đọc từ đầu</button>
+        <button class="btn btn-secondary" onclick="novelReadChapter()">▶ Đọc từ vị trí hiện tại</button>
+      </div>
+      <p style="font-size:12px; color:var(--muted); margin-top:8px">
+        Điều khiển phát lại (⏸ ⏹ 🔁) và thanh tiến trình nằm ở thanh dưới cùng.
+      </p>
+    </div>
+
+    <!-- Content area -->
+    <div class="card">
+      <div id="novelLoading" class="novel-loading"></div>
+      <div id="novelTitle" class="novel-title"></div>
+      <div id="novelContent" class="novel-content">
+        <p style="color:var(--muted); font-size:14px; text-align:center; padding:40px 0">Chưa có nội dung · Tải chương hoặc dán văn bản để bắt đầu</p>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ══ Toast ═══════════════════════════════════════════════ -->
+  <div id="toast" role="status" aria-live="polite"></div>
+
+  <!-- ══ Novel: speech loading overlay ══════════════════════ -->
+  <div id="novelSpeechLoading" class="novel-speech-loading hidden">
+    🔊 Đang chuẩn bị giọng đọc…
+  </div>
+
+  <!-- ══ Novel: Combined fixed bottom bar ═══════════════════════ -->
+  <div class="novel-bottom-bar tab-novel-only" id="novelChapterNav">
+
+    <!-- Tầng trên: TTS progress -->
+    <div class="novel-bar-progress">
+      <div class="novel-bar-progress-meta">
+        <span id="novelProgressText">0 / 0</span>
+        <div class="novel-bar-controls">
+          <button class="novel-bar-btn" id="novelBtnPauseResume" onclick="novelTogglePauseResume()" title="Tạm dừng / Tiếp tục">⏸</button>
+          <button class="novel-bar-btn novel-bar-btn--stop" onclick="novelStopRead()" title="Dừng hẳn">⏹</button>
+          <button class="novel-bar-btn" onclick="novelRestartRead()" title="Đọc lại">🔁</button>
+        </div>
+      </div>
+      <input class="novel-progress-slider" id="novelProgressBar" type="range" min="0" value="0" />
+    </div>
+
+    <!-- Tầng dưới: Điều hướng chương -->
+    <div class="novel-bar-nav">
+      <button class="btn btn-secondary" onclick="novelGoPrev()" id="novelBtnPrev">⬅ Trước</button>
+      <select class="novel-chapter-select" id="novelChapterSelect"></select>
+      <button class="btn btn-secondary" onclick="novelGoNext()" id="novelBtnNext">Sau ➡</button>
+    </div>
+
+  </div>
+
+  <!-- ══ Novel: Settings Popup ══════════════════════════════ -->
+  <div id="novelSettingsPopup" class="novel-popup hidden">
+    <div class="novel-popup-box">
+      <h3>⚙️ Cấu hình</h3>
+
+      <label class="novel-popup-label">URL Backend (proxy crawler)</label>
+      <input class="input-field" id="novelBackendInput" placeholder="http://localhost:3000" style="margin-bottom:18px" />
+
+      <hr class="novel-popup-hr" />
+
+      <h3 style="margin-bottom:14px">🔊 Giọng đọc</h3>
+      <label class="novel-popup-label">Giọng</label>
+      <select class="input-field" id="novelVoiceSelect" style="margin-bottom:14px"></select>
+
+      <label class="novel-popup-label">Tốc độ: <span id="novelRateValue">1</span>x</label>
+      <input class="novel-slider" id="novelRateInput" type="range" min="0.5" max="2" step="0.1" value="1" style="margin-bottom:14px" />
+
+      <label class="novel-popup-label">Cao độ: <span id="novelPitchValue">1</span></label>
+      <input class="novel-slider" id="novelPitchInput" type="range" min="0" max="2" step="0.1" value="1" style="margin-bottom:22px" />
+
+      <div class="novel-popup-footer">
+        <button class="btn btn-secondary" onclick="novelCloseSettings()">Huỷ</button>
+        <button class="btn btn-primary"   onclick="novelSaveSettings()">Lưu</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ External libs ═══════════════════════════════════════ -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
+  <!-- ══ Module scripts ══════════════════════════════════════ -->
+  <script src="pdf.js"></script>
+  <script src="novel.js"></script>
+
+  <!-- ══ Shell: Toast + Tab + Theme ════════════════════════ -->
+  <script>
+    /* ── Toast ─────────────────────────────────────────── */
+    let _toastTimer;
+    function showToast(msg) {
+      clearTimeout(_toastTimer);
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      _toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+    }
+
+    /* ── Tab switching ──────────────────────────────────── */
+    function switchTab(name) {
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(b => {
+        b.classList.remove('active');
+        b.setAttribute('aria-selected', 'false');
+      });
+      document.getElementById('tab-' + name).classList.add('active');
+      const btn = document.getElementById('tab-btn-' + name);
+      btn.classList.add('active');
+      btn.setAttribute('aria-selected', 'true');
+
+      // Show/hide elements belonging to novel tab only
+      document.querySelectorAll('.tab-novel-only').forEach(el => {
+        el.style.display = name === 'novel' ? '' : 'none';
+      });
+      localStorage.setItem('activeTab', name);
+    }
+
+    /* ── Theme ──────────────────────────────────────────── */
+    const _html  = document.documentElement;
+    const _thBtn = document.getElementById('themeToggle');
+
+    function applyTheme(mode) {
+      if (mode === 'light') {
+        _html.classList.add('light');
+        _thBtn.textContent = '☀️';
+        _thBtn.title = 'Chuyển sang chế độ tối';
+      } else {
+        _html.classList.remove('light');
+        _thBtn.textContent = '🌙';
+        _thBtn.title = 'Chuyển sang chế độ sáng';
+      }
+      localStorage.setItem('theme', mode);
+    }
+
+    function toggleTheme() {
+      applyTheme(_html.classList.contains('light') ? 'dark' : 'light');
+    }
+
+    _thBtn.addEventListener('click', toggleTheme);
+
+    /* ── Init on load ───────────────────────────────────── */
+    window.addEventListener('DOMContentLoaded', () => {
+      // Restore theme FIRST (avoid flash)
+      applyTheme(localStorage.getItem('theme') || 'dark');
+
+      // Restore last tab
+      const saved = localStorage.getItem('activeTab');
+      if (saved && document.getElementById('tab-' + saved)) switchTab(saved);
+      else switchTab('pdf');
+    });
+  </script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./service-worker.js')
+    }
+  </script>
+</body>
+</html>
