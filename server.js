@@ -122,6 +122,21 @@ app.get("/ping",(req,res)=>{
   res.send("ok")
 })
 
+/* ---------------- TEST ENDPOINT ---------------- */
+
+app.get('/test', async (req, res) => {
+  const { url } = req.query
+
+  if (!url) {
+    return res.status(400).json({
+      error: "Missing url"
+    })
+  }
+
+  const r = await axios.get(url);
+  res.send(r.data);
+});
+
 /* ---------------- START SERVER ---------------- */
 
 const PORT = process.env.PORT || 3000
