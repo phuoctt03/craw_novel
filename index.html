@@ -127,6 +127,115 @@
       box-shadow: 0 10px 20px rgba(239, 68, 68, 0.3);
     }
 
+    button.success {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+    }
+    button.success:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(16, 185, 129, 0.35);
+    }
+    button.success:active { transform: translateY(0); }
+    button.success:disabled {
+      background: #9ca3af;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    button.warning {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      color: white;
+    }
+    button.warning:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(245, 158, 11, 0.35);
+    }
+
+    /* ─── Export Progress Modal ───────────────────────────────── */
+    #exportModal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.65);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+      backdrop-filter: blur(6px);
+    }
+
+    .export-box {
+      background: white;
+      border-radius: 20px;
+      padding: 36px 40px;
+      width: 90%;
+      max-width: 480px;
+      box-shadow: 0 30px 60px rgba(0,0,0,0.35);
+      animation: slideIn 0.3s ease;
+    }
+
+    .export-box h3 {
+      font-size: 20px;
+      font-weight: 700;
+      color: #1f2937;
+      margin-bottom: 6px;
+    }
+
+    .export-box .export-subtitle {
+      font-size: 13px;
+      color: #6b7280;
+      margin-bottom: 24px;
+    }
+
+    .export-stat {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 14px;
+      color: #374151;
+      margin-bottom: 10px;
+      padding: 10px 14px;
+      background: #f9fafb;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+    }
+
+    .export-stat span:last-child {
+      font-weight: 700;
+      color: #667eea;
+    }
+
+    .export-track {
+      margin: 20px 0 8px;
+      font-size: 13px;
+      color: #6b7280;
+      min-height: 18px;
+    }
+
+    .export-bar-wrap {
+      width: 100%;
+      height: 10px;
+      background: #e5e7eb;
+      border-radius: 999px;
+      overflow: hidden;
+      margin-bottom: 24px;
+    }
+
+    .export-bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #667eea, #764ba2);
+      transition: width 0.4s ease;
+      width: 0%;
+    }
+
+    .export-actions {
+      display: flex;
+      gap: 12px;
+    }
+
+    .export-actions button { flex: 1; }
+
     /* ─── Loading / Title / Content ─────────────────────────── */
     #loading {
       text-align: center;
@@ -503,6 +612,9 @@
           <button class="secondary"  onclick="resumeRead()">▶ Tiếp tục</button>
           <button class="secondary"  onclick="stopRead()">⏹ Dừng</button>
           <button class="secondary"  onclick="restartRead()">🔁 Đọc lại</button>
+          <button class="success"    onclick="startExportAll()" id="btnExportJson">📦 Export JSON</button>
+          <button class="warning"    onclick="triggerImportJson()">📂 Import JSON</button>
+          <input  id="importJsonFile" type="file" accept=".json" class="hidden" onchange="importNovelJson(event)" />
         </div>
       </div>
 
@@ -559,6 +671,38 @@
       <div class="popup-buttons">
         <button class="secondary" onclick="closeBackendPopup()">Huỷ</button>
         <button class="primary"   onclick="saveBackend()">Lưu</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Export Progress Modal ────────────────────────────── -->
+  <div id="exportModal" class="hidden">
+    <div class="export-box">
+      <h3>📦 Đang Export tất cả chương</h3>
+      <p class="export-subtitle">Hệ thống sẽ tải từng chương và đóng gói thành file JSON.</p>
+
+      <div class="export-stat">
+        <span>Tổng số chương</span>
+        <span id="exportTotal">0</span>
+      </div>
+      <div class="export-stat">
+        <span>Đã hoàn thành</span>
+        <span id="exportDone">0</span>
+      </div>
+      <div class="export-stat">
+        <span>Lỗi / Bỏ qua</span>
+        <span id="exportErrors">0</span>
+      </div>
+
+      <p class="export-track" id="exportTrack">Đang chuẩn bị...</p>
+
+      <div class="export-bar-wrap">
+        <div class="export-bar-fill" id="exportBarFill"></div>
+      </div>
+
+      <div class="export-actions">
+        <button class="secondary" id="btnCancelExport" onclick="cancelExport()">❌ Hủy</button>
+        <button class="success hidden" id="btnDownloadExport" onclick="downloadExportedJson()">⬇️ Tải file JSON</button>
       </div>
     </div>
   </div>
@@ -1140,6 +1284,11 @@ function useInputText() {
       nextBtn.disabled = currentIndex <= 0
     }
 
+    // Kiểm tra xem chương hiện tại có offline content (từ import) không
+    function isImportedMode() {
+      return chapters.length > 0 && chapters[currentIndex] && chapters[currentIndex].content
+    }
+
     async function goNext() {
       if (!chapters.length) return
       if (currentIndex <= 0) { alert('⚠️ Hết chương mới hơn rồi'); return }
@@ -1147,7 +1296,11 @@ function useInputText() {
       currentIndex--
       document.getElementById('urlInput').value = chapters[currentIndex].url
       updateNavButtons()
-      await fetchChapter()
+      if (isImportedMode()) {
+        loadChapterFromImport(currentIndex)
+      } else {
+        await fetchChapter()
+      }
       window.scrollTo({ top: 0, behavior: 'smooth' })
     }
 
@@ -1158,7 +1311,11 @@ function useInputText() {
       currentIndex++
       document.getElementById('urlInput').value = chapters[currentIndex].url
       updateNavButtons()
-      await fetchChapter()
+      if (isImportedMode()) {
+        loadChapterFromImport(currentIndex)
+      } else {
+        await fetchChapter()
+      }
       window.scrollTo({ top: 0, behavior: 'smooth' })
     }
 
@@ -1201,6 +1358,196 @@ function useInputText() {
         fetchChapter()
       }
     })
+
+    /* ═══════════════════════════════════════════════════════════
+       EXPORT ALL CHAPTERS → JSON
+    ═══════════════════════════════════════════════════════════ */
+    let exportCancelled  = false
+    let exportedData     = null   // giữ data để download sau khi xong
+
+    function startExportAll() {
+      if (!chapters.length) {
+        alert('⚠️ Chưa có danh sách chương. Hãy tải một chương bất kỳ trước để lấy danh sách.')
+        return
+      }
+      if (!backend) {
+        alert('⚠️ Chưa cấu hình backend. Vào Cài đặt để nhập URL backend.')
+        return
+      }
+
+      exportCancelled = false
+      exportedData    = null
+
+      // Build ordered list: chapters array từ nhỏ đến lớn (index cao = chương cũ hơn)
+      // Backend trả về chapters[] mới nhất ở đầu (index 0), cũ nhất ở cuối
+      const ordered = [...chapters].reverse()   // đảo lại → chương đầu → cuối
+
+      document.getElementById('exportTotal').innerText  = ordered.length
+      document.getElementById('exportDone').innerText   = 0
+      document.getElementById('exportErrors').innerText = 0
+      document.getElementById('exportTrack').innerText  = 'Đang chuẩn bị...'
+      document.getElementById('exportBarFill').style.width = '0%'
+      document.getElementById('btnDownloadExport').classList.add('hidden')
+      document.getElementById('btnCancelExport').classList.remove('hidden')
+      document.getElementById('exportModal').classList.remove('hidden')
+
+      runExport(ordered)
+    }
+
+    async function runExport(ordered) {
+      const result = {
+        exportedAt : new Date().toISOString(),
+        backendUrl : backend,
+        totalChapters : ordered.length,
+        chapters   : []
+      }
+
+      let done   = 0
+      let errors = 0
+
+      for (const ch of ordered) {
+        if (exportCancelled) break
+
+        document.getElementById('exportTrack').innerText = `⏳ Đang tải: ${ch.title}`
+
+        try {
+          const res  = await fetch(`${backend}/chapter?url=${encodeURIComponent(ch.url)}`)
+          if (!res.ok) throw new Error('HTTP ' + res.status)
+          const data = await res.json()
+
+          result.chapters.push({
+            index   : done + errors,
+            title   : data.title   || ch.title,
+            url     : ch.url,
+            chapter : ch.chapter || '',
+            content : data.content || ''
+          })
+        } catch (err) {
+          errors++
+          result.chapters.push({
+            index   : done + errors - 1 + done,
+            title   : ch.title,
+            url     : ch.url,
+            chapter : ch.chapter || '',
+            content : '',
+            error   : err.message
+          })
+        }
+
+        done++
+        document.getElementById('exportDone').innerText   = done
+        document.getElementById('exportErrors').innerText = errors
+        const pct = Math.round((done / ordered.length) * 100)
+        document.getElementById('exportBarFill').style.width = pct + '%'
+
+        // Delay nhỏ tránh rate-limit và không block UI
+        await sleep(300)
+      }
+
+      if (!exportCancelled) {
+        result.totalChapters  = result.chapters.length
+        exportedData          = result
+
+        document.getElementById('exportTrack').innerText = `✅ Hoàn thành! ${done} chương đã được export.`
+        document.getElementById('exportBarFill').style.width = '100%'
+        document.getElementById('btnDownloadExport').classList.remove('hidden')
+        document.getElementById('btnCancelExport').classList.add('hidden')
+      } else {
+        document.getElementById('exportTrack').innerText = '🚫 Đã hủy export.'
+      }
+    }
+
+    function cancelExport() {
+      exportCancelled = true
+      document.getElementById('exportModal').classList.add('hidden')
+    }
+
+    function downloadExportedJson() {
+      if (!exportedData) return
+      const json     = JSON.stringify(exportedData, null, 2)
+      const blob     = new Blob([json], { type: 'application/json' })
+      const url      = URL.createObjectURL(blob)
+      const a        = document.createElement('a')
+      const filename = 'novel_' + new Date().toISOString().slice(0,10) + '.json'
+      a.href         = url
+      a.download     = filename
+      a.click()
+      URL.revokeObjectURL(url)
+      document.getElementById('exportModal').classList.add('hidden')
+    }
+
+    function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
+
+    /* ═══════════════════════════════════════════════════════════
+       IMPORT JSON → hiển thị như fetch thật
+    ═══════════════════════════════════════════════════════════ */
+    function triggerImportJson() {
+      document.getElementById('importJsonFile').click()
+    }
+
+    function importNovelJson(event) {
+      const file = event.target.files[0]
+      if (!file) return
+
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        try {
+          const data = JSON.parse(e.target.result)
+
+          if (!Array.isArray(data.chapters) || data.chapters.length === 0) {
+            alert('❌ File JSON không hợp lệ hoặc không có chương nào.')
+            return
+          }
+
+          stopRead()
+
+          // Rebuild chapters list theo thứ tự từ file (đã đảo ngược lúc export)
+          // Import lại theo đúng thứ tự gốc của file (chương 1 → cuối)
+          // Để nav hoạt động, chuyển về thứ tự ngược (mới nhất ở index 0)
+          const chList = [...data.chapters].reverse().map(ch => ({
+            title   : ch.title,
+            url     : ch.url,
+            chapter : ch.chapter || '',
+            content : ch.content || ''
+          }))
+
+          chapters     = chList
+          currentIndex = chList.length - 1   // bắt đầu ở chương đầu tiên (index cao nhất)
+
+          renderChapterSelect()
+          updateNavButtons()
+
+          // Hiển thị chương đầu tiên luôn
+          loadChapterFromImport(currentIndex)
+
+          alert(`✅ Import thành công ${data.chapters.length} chương từ file: ${file.name}`)
+        } catch (err) {
+          alert('❌ File JSON lỗi: ' + err.message)
+        }
+      }
+      reader.readAsText(file)
+      // reset để có thể import lại cùng file
+      event.target.value = ''
+    }
+
+    function loadChapterFromImport(index) {
+      const ch = chapters[index]
+      if (!ch) return
+
+      stopRead()
+
+      document.getElementById('urlInput').value = ch.url || ''
+      document.getElementById('title').innerText = ch.title || 'Chương'
+
+      const content = ch.content || '(Chương này không có nội dung)'
+      renderContentWithSpans(content)
+
+      currentText   = content
+      currentChunks = buildChunks(currentText)
+      initProgressBar()
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+
   </script>
 
   <script>
