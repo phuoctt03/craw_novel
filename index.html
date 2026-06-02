@@ -614,6 +614,7 @@
           <button class="secondary"  onclick="restartRead()">🔁 Đọc lại</button>
           <button class="success"    onclick="startExportAll()" id="btnExportJson">📦 Export JSON</button>
           <button class="warning"    onclick="triggerImportJson()">📂 Import JSON</button>
+          <button class="danger"     onclick="clearOfflineData()" title="Xóa dữ liệu truyện đang lưu offline">🗑 Xóa offline</button>
           <input  id="importJsonFile" type="file" accept=".json" class="hidden" onchange="importNovelJson(event)" />
         </div>
       </div>
@@ -729,6 +730,57 @@
     let needsDelay               = false  // tracks if cancel() was called and speak() needs a delay
     let progressTimer            = null   // fallback timer when onboundary doesn't fire
     let boundaryFired            = false  // flag: onboundary is working on this device
+
+    /* ═══════════════════════════════════════════════════════════
+       INDEXEDDB – Lưu dữ liệu import offline
+    ═══════════════════════════════════════════════════════════ */
+    const novelDB = (() => {
+      const DB_NAME    = 'NovelReaderDB'
+      const DB_VERSION = 1
+      const STORE      = 'novels'
+      const KEY        = 'imported_novel'
+
+      function open() {
+        return new Promise((resolve, reject) => {
+          const req = indexedDB.open(DB_NAME, DB_VERSION)
+          req.onupgradeneeded = e => e.target.result.createObjectStore(STORE)
+          req.onsuccess = e => resolve(e.target.result)
+          req.onerror   = e => reject(e.target.error)
+        })
+      }
+
+      async function save(data) {
+        const db = await open()
+        return new Promise((resolve, reject) => {
+          const tx  = db.transaction(STORE, 'readwrite')
+          tx.objectStore(STORE).put(data, KEY)
+          tx.oncomplete = resolve
+          tx.onerror    = e => reject(e.target.error)
+        })
+      }
+
+      async function load() {
+        const db = await open()
+        return new Promise((resolve, reject) => {
+          const tx  = db.transaction(STORE, 'readonly')
+          const req = tx.objectStore(STORE).get(KEY)
+          req.onsuccess = e => resolve(e.target.result || null)
+          req.onerror   = e => reject(e.target.error)
+        })
+      }
+
+      async function clear() {
+        const db = await open()
+        return new Promise((resolve, reject) => {
+          const tx  = db.transaction(STORE, 'readwrite')
+          tx.objectStore(STORE).delete(KEY)
+          tx.oncomplete = resolve
+          tx.onerror    = e => reject(e.target.error)
+        })
+      }
+
+      return { save, load, clear }
+    })()
 
     // First-time setup
     if (!backend) {
@@ -1349,9 +1401,29 @@ function useInputText() {
     })
 
     /* ═══════════════════════════════════════════════════════════
-       INIT
+       INIT – uu tiên restore từ IndexedDB
     ═══════════════════════════════════════════════════════════ */
-    window.addEventListener('load', () => {
+    window.addEventListener('load', async () => {
+      // 1️⃣ Thử restore dữ liệu import từ IndexedDB trước
+      try {
+        const saved = await novelDB.load()
+        if (saved && Array.isArray(saved.chapters) && saved.chapters.length) {
+          chapters     = saved.chapters
+          currentIndex = typeof saved.currentIndex === 'number' ? saved.currentIndex : chapters.length - 1
+
+          renderChapterSelect()
+          updateNavButtons()
+          loadChapterFromImport(currentIndex)
+
+          document.getElementById('loading').innerText = `💾 Đã khôi phục ${chapters.length} chương từ lần đọc trước.`
+          setTimeout(() => document.getElementById('loading').innerText = '', 3000)
+          return  // không fetch URL nữa
+        }
+      } catch (e) {
+        console.warn('IndexedDB restore failed:', e)
+      }
+
+      // 2️⃣ Nếu không có offline data, fetch URL cũ như bình thường
       const lastUrl = localStorage.getItem('last_chapter_url')
       if (lastUrl) {
         document.getElementById('urlInput').value = lastUrl
@@ -1490,7 +1562,7 @@ function useInputText() {
       if (!file) return
 
       const reader = new FileReader()
-      reader.onload = (e) => {
+      reader.onload = async (e) => {
         try {
           const data = JSON.parse(e.target.result)
 
@@ -1520,6 +1592,13 @@ function useInputText() {
           // Hiển thị chương đầu tiên luôn
           loadChapterFromImport(currentIndex)
 
+          // 💾 Lưu vào IndexedDB để giữ sau khi F5
+          try {
+            await novelDB.save({ chapters: chList, currentIndex })
+          } catch (dbErr) {
+            console.warn('⚠️ Không lưu được vào IndexedDB:', dbErr)
+          }
+
           alert(`✅ Import thành công ${data.chapters.length} chương từ file: ${file.name}`)
         } catch (err) {
           alert('❌ File JSON lỗi: ' + err.message)
@@ -1530,7 +1609,7 @@ function useInputText() {
       event.target.value = ''
     }
 
-    function loadChapterFromImport(index) {
+    async function loadChapterFromImport(index) {
       const ch = chapters[index]
       if (!ch) return
 
@@ -1546,6 +1625,32 @@ function useInputText() {
       currentChunks = buildChunks(currentText)
       initProgressBar()
       window.scrollTo({ top: 0, behavior: 'smooth' })
+
+      // Lưu lại vị trí chương đang đọc để restore sau F5
+      if (chapters.length) {
+        try {
+          await novelDB.save({ chapters, currentIndex: index })
+        } catch (_) {}
+      }
+    }
+
+    async function clearOfflineData() {
+      if (!confirm('🗑️ Xóa toàn bộ dữ liệu truyện đang lưu offline?')) return
+      try {
+        await novelDB.clear()
+        chapters     = []
+        currentIndex = -1
+        document.getElementById('title').innerText   = ''
+        document.getElementById('content').innerHTML = ''
+        renderChapterSelect()
+        updateNavButtons()
+        currentText   = ''
+        currentChunks = []
+        initProgressBar()
+        alert('✅ Đã xóa dữ liệu offline.')
+      } catch (e) {
+        alert('❌ Lỗi khi xóa: ' + e.message)
+      }
     }
 
   </script>
