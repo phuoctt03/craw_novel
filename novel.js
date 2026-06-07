@@ -31,7 +31,7 @@
   let boundaryFired      = false;
   let isReading          = false;
   let isPaused           = false;  // track pause state manually (Chrome bug workaround)
-  let wavelock.          = null;
+  let wavelock           = null;
 
   /* ══════════════════════════════════════════════════════════
      DOM REFS
