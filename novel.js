@@ -80,8 +80,10 @@ async function acquireWakeLock() {
         wakeLock = null;
       });
     }
+    alert('bật wavelock');
   } catch (err) {
     console.warn('Không thể bật Wake Lock:', err);
+    alert('k thể bật wavelock');
   }
 }
 
