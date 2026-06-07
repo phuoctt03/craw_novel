@@ -31,6 +31,7 @@
   let boundaryFired      = false;
   let isReading          = false;
   let isPaused           = false;  // track pause state manually (Chrome bug workaround)
+  let wavelock.          = null;
 
   /* ══════════════════════════════════════════════════════════
      DOM REFS
@@ -69,6 +70,31 @@
     else if (state === 'playing') { btnPR.textContent = '⏸'; btnPR.title = 'Tạm dừng'; }
     else                     { btnPR.textContent = '▶'; btnPR.title = 'Phát'; }
   }
+
+async function acquireWakeLock() {
+  try {
+    if ('wakeLock' in navigator && !wakeLock) {
+      wakeLock = await navigator.wakeLock.request('screen');
+
+      wakeLock.addEventListener('release', () => {
+        wakeLock = null;
+      });
+    }
+  } catch (err) {
+    console.warn('Không thể bật Wake Lock:', err);
+  }
+}
+
+async function releaseWakeLock() {
+  try {
+    if (wakeLock) {
+      await wakeLock.release();
+      wakeLock = null;
+    }
+  } catch (err) {
+    console.warn('Không thể tắt Wake Lock:', err);
+  }
+}
 
   /* ══════════════════════════════════════════════════════════
      CONTENT RENDER
@@ -355,8 +381,9 @@
   }
 
   /* ── Playback controls ─────────────────────────────────── */
-  function novelReadChapter() {
+  async function novelReadChapter() {
     if (!currentText) { showToast('⚠️ Chưa có nội dung!'); return; }
+    await acquireWakeLock();
     showSpeechLoading();
     // Seek from progress bar position
     currentAbsoluteCharIndex = parseInt(progressBar.value || '0');
@@ -365,7 +392,8 @@
     setPauseBtn('playing');
   }
 
-  function novelStopRead() {
+  async function novelStopRead() {
+    await releaseWakeLock();
     clearProgressTimer();
     speechSynthesis.cancel();
     isReading = false;
@@ -537,6 +565,16 @@
       updateNavButtons();
     }
   };
+
+  document.addEventListener('visibilitychange', async () => {
+  if (
+    document.visibilityState === 'visible' &&
+    window.speechSynthesis?.speaking &&
+    !wakeLock
+  ) {
+    await acquireWakeLock();
+  }
+});
 
   /* ══════════════════════════════════════════════════════════
      GLOBAL WRAPPERS (called from index.html inline onclick)
