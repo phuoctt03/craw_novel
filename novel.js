@@ -31,7 +31,7 @@
   let boundaryFired      = false;
   let isReading          = false;
   let isPaused           = false;  // track pause state manually (Chrome bug workaround)
-  let wavelock           = null;
+  let waveLock           = null;
 
   /* ══════════════════════════════════════════════════════════
      DOM REFS
@@ -439,15 +439,15 @@ async function releaseWakeLock() {
     }
   }
 
-  function novelRestartRead() {
-    novelStopRead();
+  async function novelRestartRead() {
+    await novelStopRead();
     currentChunkIndex = 0; currentCharIndex = 0;
     currentWordIndex  = 0; currentAbsoluteCharIndex = 0;
     progressBar.value = 0;
     progressBar.style.setProperty('--prg', '0%');
     localStorage.removeItem('novel_chunk');
     localStorage.removeItem('novel_char');
-    novelReadChapter();
+    await novelReadChapter();
   }
 
   /* ── Progress bar interactions ─────────────────────────── */
